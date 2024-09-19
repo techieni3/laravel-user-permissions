@@ -1,0 +1,58 @@
+{
+    "name": "techieni3/laravel-user-permissions",
+    "description": "A Laravel package for managing user permissions.",
+    "type": "library",
+    "license": "MIT",
+    "version": "1.0.0",
+    "authors": [
+        {
+            "role": "Developer",
+            "name": "Nitin Gaikwad",
+            "email": "niteen1593@gmail.com"
+        }
+    ],
+    "require": {
+        "php": "^8.3",
+        "laravel/framework": "^11.0"
+    },
+    "require-dev": {
+        "laravel/pint": "^1.17",
+        "orchestra/testbench": "^9.4",
+        "pestphp/pest": "^3.0",
+        "phpstan/phpstan": "^1.12"
+    },
+    "autoload": {
+        "psr-4": {
+            "Techieni3\\LaravelUserPermissions\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Workbench\\App\\": "workbench/app/",
+            "TechieNi3\\LaravelUserPermissions\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "pint": "pint",
+        "test": "pest",
+        "test-coverage": "pest --coverage-html coverage",
+        "analyse": "phpstan analyse"
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true,
+    "config": {
+        "sort-packages": true,
+        "preferred-install": "dist",
+        "optimize-autoloader": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Techieni3\\LaravelUserPermissions\\Providers\\PermissionsServiceProvider"
+            ]
+        }
+    }
+}

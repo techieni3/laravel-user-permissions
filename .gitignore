@@ -1,0 +1,10 @@
+/.fleet
+/.idea
+/.vscode
+/vendor
+composer.lock
+/phpunit.xml
+/.phpunit.cache
+.phpunit.result.cache
+coverage
+build
