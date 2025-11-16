@@ -17,6 +17,11 @@ trait HasRoles
     use HasPermissions;
 
     /**
+     * Request-level cache for user roles.
+     */
+    protected $cachedRoles = null;
+
+    /**
      * Get all roles for the user.
      */
     public function roles(): BelongsToMany
@@ -31,28 +36,28 @@ trait HasRoles
 
     /**
      * Get all roles for the user as a collection.
+     * Uses request-level cache to avoid multiple DB queries within the same request.
      */
     public function getAllRoles(): Collection
     {
-        return $this->roles()->get();
+        return $this->getCachedRoles();
     }
 
     /**
-     * Get all roles for the user.
+     * Check if the user has a specific role.
+     * Uses request-level cache to avoid multiple DB queries within the same request.
      */
     public function hasRole(string|BackedEnum $role): bool
     {
-        $this->loadMissing('roles');
-
         $roleString = $role;
 
         if ($role instanceof BackedEnum) {
             $roleString = $role->value;
         }
 
-        return $this->roles
-            ?->map(fn (Role $role) => $role->name->value)
-            ?->contains($roleString);
+        return $this->getCachedRoles()
+            ->map(fn (Role $role) => $role->name->value)
+            ->contains($roleString);
     }
 
     /**
@@ -75,6 +80,10 @@ trait HasRoles
 
         // Attach the role to the user
         $this->attachRole($dbRole);
+
+        // Clear cached roles and permissions (since roles grant permissions)
+        $this->flushRolesCache();
+        $this->flushPermissionsCache();
     }
 
     /**
@@ -97,6 +106,10 @@ trait HasRoles
 
         // Detach the role from the user
         $this->roles()->detach($dbRole);
+
+        // Clear cached roles and permissions (since roles grant permissions)
+        $this->flushRolesCache();
+        $this->flushPermissionsCache();
     }
 
     /**
@@ -116,6 +129,10 @@ trait HasRoles
         }
 
         $this->roles()->sync($roleIds);
+
+        // Clear cached roles and permissions (since roles grant permissions)
+        $this->flushRolesCache();
+        $this->flushPermissionsCache();
     }
 
     /**
@@ -233,5 +250,29 @@ trait HasRoles
     private function attachRole(Role $role): void
     {
         $this->roles()->attach($role);
+    }
+
+    /**
+     * Get cached roles or load them from database.
+     * This ensures roles are only queried once per request.
+     *
+     * @return \Illuminate\Database\Eloquent\Collection
+     */
+    protected function getCachedRoles(): Collection
+    {
+        if ($this->cachedRoles === null) {
+            $this->cachedRoles = $this->roles()->get();
+        }
+
+        return $this->cachedRoles;
+    }
+
+    /**
+     * Clear the request-level roles cache.
+     * Should be called after adding/removing/syncing roles.
+     */
+    public function flushRolesCache(): void
+    {
+        $this->cachedRoles = null;
     }
 }

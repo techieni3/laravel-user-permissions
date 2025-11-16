@@ -12,6 +12,11 @@ use Techieni3\LaravelUserPermissions\Models\Permission;
 trait HasPermissions
 {
     /**
+     * Request-level cache for user permissions.
+     */
+    protected $cachedPermissions = null;
+
+    /**
      * Add a permission to the user.
      *
      * @throws RuntimeException If the permission is already assigned, or permission is not synced with the database.
@@ -30,6 +35,9 @@ trait HasPermissions
 
         // Attach the permission to the user
         $this->directPermissions()->attach($dbPermission);
+
+        // Clear cached permissions
+        $this->flushPermissionsCache();
     }
 
     /**
@@ -51,6 +59,9 @@ trait HasPermissions
 
         // Detach the permission from the user
         $this->directPermissions()->detach($dbPermission);
+
+        // Clear cached permissions
+        $this->flushPermissionsCache();
     }
 
     /**
@@ -70,6 +81,9 @@ trait HasPermissions
         }
 
         $this->directPermissions()->sync($permissionIds);
+
+        // Clear cached permissions
+        $this->flushPermissionsCache();
     }
 
     /**
@@ -155,14 +169,13 @@ trait HasPermissions
 
     /**
      * Check if the user has a specific permission.
+     * Uses request-level cache to avoid multiple DB queries within the same request.
      */
     public function hasPermission(string $permissionString): bool
     {
-        $this->loadMissing('permissions');
-
-        return $this->permissions
-            ?->map(fn (Permission $permission) => $permission->name)
-            ?->contains($this->makePermissionName($permissionString));
+        return $this->getCachedPermissions()
+            ->map(fn (Permission $permission) => $permission->name)
+            ->contains($this->makePermissionName($permissionString));
     }
 
     /**
@@ -175,10 +188,35 @@ trait HasPermissions
 
     /**
      * Get all permissions for the user as a collection.
+     * Uses request-level cache to avoid multiple DB queries within the same request.
      */
     public function getAllPermissions()
     {
-        return $this->permissions()->get();
+        return $this->getCachedPermissions();
+    }
+
+    /**
+     * Get cached permissions or load them from database.
+     * This ensures permissions are only queried once per request.
+     *
+     * @return \Illuminate\Support\Collection
+     */
+    protected function getCachedPermissions()
+    {
+        if ($this->cachedPermissions === null) {
+            $this->cachedPermissions = $this->permissions()->get();
+        }
+
+        return $this->cachedPermissions;
+    }
+
+    /**
+     * Clear the request-level permissions cache.
+     * Should be called after adding/removing/syncing permissions.
+     */
+    public function flushPermissionsCache(): void
+    {
+        $this->cachedPermissions = null;
     }
 
     private function makePermissionName($permissionString): string
