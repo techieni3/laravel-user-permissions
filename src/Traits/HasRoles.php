@@ -78,6 +78,79 @@ trait HasRoles
     }
 
     /**
+     * Remove a role from the user.
+     *
+     * @throws RuntimeException If the role is not assigned to the user.
+     */
+    public function removeRole(string|BackedEnum $role): void
+    {
+        // Check if the user has the role
+        if ( ! $this->hasRole($role)) {
+            throw new RuntimeException('Role is not assigned to the user.');
+        }
+
+        // Convert string role to BackedEnum if necessary
+        $roleEnum = $this->convertToRoleEnum($role);
+
+        // Verify role exists in the database
+        $dbRole = $this->verifyRoleInDatabase($roleEnum);
+
+        // Detach the role from the user
+        $this->roles()->detach($dbRole);
+    }
+
+    /**
+     * Sync roles with the user (removes all existing roles and adds new ones).
+     *
+     * @param  array<string|BackedEnum>  $roles
+     * @throws RuntimeException If any role is not synced with the database.
+     */
+    public function syncRoles(array $roles): void
+    {
+        $roleIds = [];
+
+        foreach ($roles as $role) {
+            $roleEnum = $this->convertToRoleEnum($role);
+            $dbRole = $this->verifyRoleInDatabase($roleEnum);
+            $roleIds[] = $dbRole->id;
+        }
+
+        $this->roles()->sync($roleIds);
+    }
+
+    /**
+     * Check if the user has any of the given roles.
+     *
+     * @param  array<string|BackedEnum>  $roles
+     */
+    public function hasAnyRole(array $roles): bool
+    {
+        foreach ($roles as $role) {
+            if ($this->hasRole($role)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Check if the user has all of the given roles.
+     *
+     * @param  array<string|BackedEnum>  $roles
+     */
+    public function hasAllRoles(array $roles): bool
+    {
+        foreach ($roles as $role) {
+            if ( ! $this->hasRole($role)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
      * Convert a string role to a BackedEnum instance.
      *
      * @throws RuntimeException If the enum file is missing or the role is invalid.

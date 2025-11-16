@@ -29,14 +29,80 @@ trait HasPermissions
         $dbPermission = $this->verifyPermissionInDatabase($searchablePermission);
 
         // Attach the permission to the user
-        $this->permissions()->attach($dbPermission);
+        $this->directPermissions()->attach($dbPermission);
     }
 
     /**
-     * Convert a string permission to a BackedEnum instance.
+     * Remove a permission from the user.
      *
-     * @throws RuntimeException If the enum file is missing or the permission is invalid.
+     * @throws RuntimeException If the permission is not assigned to the user.
      */
+    public function removePermission(string $permission): void
+    {
+        $searchablePermission = $this->makePermissionName($permission);
+
+        // Check if the user has the permission
+        if ( ! $this->hasPermission($permission)) {
+            throw new RuntimeException('Permission is not assigned to the user.');
+        }
+
+        // Get permission from the database
+        $dbPermission = $this->verifyPermissionInDatabase($searchablePermission);
+
+        // Detach the permission from the user
+        $this->directPermissions()->detach($dbPermission);
+    }
+
+    /**
+     * Sync permissions with the user (removes all existing direct permissions and adds new ones).
+     *
+     * @param  array<string>  $permissions
+     * @throws RuntimeException If any permission is not synced with the database.
+     */
+    public function syncPermissions(array $permissions): void
+    {
+        $permissionIds = [];
+
+        foreach ($permissions as $permission) {
+            $searchablePermission = $this->makePermissionName($permission);
+            $dbPermission = $this->verifyPermissionInDatabase($searchablePermission);
+            $permissionIds[] = $dbPermission->id;
+        }
+
+        $this->directPermissions()->sync($permissionIds);
+    }
+
+    /**
+     * Check if the user has any of the given permissions.
+     *
+     * @param  array<string>  $permissions
+     */
+    public function hasAnyPermission(array $permissions): bool
+    {
+        foreach ($permissions as $permission) {
+            if ($this->hasPermission($permission)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Check if the user has all of the given permissions.
+     *
+     * @param  array<string>  $permissions
+     */
+    public function hasAllPermissions(array $permissions): bool
+    {
+        foreach ($permissions as $permission) {
+            if ( ! $this->hasPermission($permission)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
 
     /**
      * Get all permissions for the user, including those granted through roles.
