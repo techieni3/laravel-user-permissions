@@ -21,6 +21,10 @@ class PermissionsServiceProvider extends ServiceProvider
 {
     public function boot(): void
     {
+        $this->registerRoutes();
+        $this->registerResources();
+        $this->registerPublishing();
+
         if ($this->app->runningInConsole()) {
             $this->commands(
                 commands: [
@@ -33,6 +37,44 @@ class PermissionsServiceProvider extends ServiceProvider
 
         $this->callAfterResolving(Gate::class, $this->setupGateBeforeCallback());
         $this->registerMiddleware();
+    }
+
+    /**
+     * Register the package routes.
+     */
+    protected function registerRoutes(): void
+    {
+        if (! config('permissions.enabled', true)) {
+            return;
+        }
+
+        $this->loadRoutesFrom(__DIR__ . '/../../routes/web.php');
+    }
+
+    /**
+     * Register the package resources.
+     */
+    protected function registerResources(): void
+    {
+        $this->loadViewsFrom(__DIR__ . '/../../resources/views', 'permissions');
+    }
+
+    /**
+     * Register the package's publishable resources.
+     */
+    protected function registerPublishing(): void
+    {
+        if (! $this->app->runningInConsole()) {
+            return;
+        }
+
+        $this->publishes([
+            __DIR__ . '/../../public' => public_path('vendor/permissions'),
+        ], 'permissions-assets');
+
+        $this->publishes([
+            __DIR__ . '/../../config/permissions.php' => config_path('permissions.php'),
+        ], 'permissions-config');
     }
 
     /**

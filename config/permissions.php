@@ -3,6 +3,15 @@
 declare(strict_types=1);
 
 return [
+    // Enable or disable the permissions manager UI
+    'enabled' => env('PERMISSIONS_MANAGER_ENABLED', true),
+
+    // The path where the permissions manager UI will be available
+    'path' => env('PERMISSIONS_MANAGER_PATH', 'permissions-manager'),
+
+    // Middleware to apply to the permissions manager routes
+    'middleware' => ['web', 'auth'],
+
     // Path to the User model file
     'user_model_file' => app_path('Models/User.php'),
 
