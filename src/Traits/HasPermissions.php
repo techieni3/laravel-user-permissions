@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Techieni3\LaravelUserPermissions\Traits;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
@@ -19,9 +20,10 @@ trait HasPermissions
     /**
      * Add a permission to the user.
      *
+     * @return static
      * @throws RuntimeException If the permission is already assigned, or permission is not synced with the database.
      */
-    public function addPermission(string $permission): void
+    public function addPermission(string $permission): static
     {
         $searchablePermission = $this->makePermissionName($permission);
 
@@ -38,14 +40,17 @@ trait HasPermissions
 
         // Clear cached permissions
         $this->flushPermissionsCache();
+
+        return $this;
     }
 
     /**
      * Remove a permission from the user.
      *
+     * @return static
      * @throws RuntimeException If the permission is not assigned to the user.
      */
-    public function removePermission(string $permission): void
+    public function removePermission(string $permission): static
     {
         $searchablePermission = $this->makePermissionName($permission);
 
@@ -62,15 +67,18 @@ trait HasPermissions
 
         // Clear cached permissions
         $this->flushPermissionsCache();
+
+        return $this;
     }
 
     /**
      * Sync permissions with the user (removes all existing direct permissions and adds new ones).
      *
      * @param  array<string>  $permissions
+     * @return static
      * @throws RuntimeException If any permission is not synced with the database.
      */
-    public function syncPermissions(array $permissions): void
+    public function syncPermissions(array $permissions): static
     {
         $permissionIds = [];
 
@@ -84,6 +92,8 @@ trait HasPermissions
 
         // Clear cached permissions
         $this->flushPermissionsCache();
+
+        return $this;
     }
 
     /**
@@ -165,6 +175,56 @@ trait HasPermissions
             relatedPivotKey: 'permission_id'
         )
             ->withTimestamps();
+    }
+
+    /**
+     * Scope the model query to only include models with specific permission(s).
+     * Checks both direct permissions and permissions via roles.
+     *
+     * @param  Builder  $query
+     * @param  string|array  $permissions
+     * @return Builder
+     */
+    public function scopePermission(Builder $query, string|array $permissions): Builder
+    {
+        $permissions = is_array($permissions) ? $permissions : [$permissions];
+
+        // Normalize permission names
+        $permissionNames = array_map(fn ($p) => $this->makePermissionName($p), $permissions);
+
+        return $query->where(function (Builder $q) use ($permissionNames) {
+            // Check direct permissions
+            $q->whereHas('directPermissions', function (Builder $query) use ($permissionNames) {
+                $query->whereIn('name', $permissionNames);
+            })
+            // OR permissions via roles
+            ->orWhereHas('roles.permissions', function (Builder $query) use ($permissionNames) {
+                $query->whereIn('permissions.name', $permissionNames);
+            });
+        });
+    }
+
+    /**
+     * Scope the model query to exclude models with specific permission(s).
+     * Checks both direct permissions and permissions via roles.
+     *
+     * @param  Builder  $query
+     * @param  string|array  $permissions
+     * @return Builder
+     */
+    public function scopeWithoutPermission(Builder $query, string|array $permissions): Builder
+    {
+        $permissions = is_array($permissions) ? $permissions : [$permissions];
+
+        // Normalize permission names
+        $permissionNames = array_map(fn ($p) => $this->makePermissionName($p), $permissions);
+
+        return $query->whereDoesntHave('directPermissions', function (Builder $query) use ($permissionNames) {
+            $query->whereIn('name', $permissionNames);
+        })
+        ->whereDoesntHave('roles.permissions', function (Builder $query) use ($permissionNames) {
+            $query->whereIn('permissions.name', $permissionNames);
+        });
     }
 
     /**

@@ -7,10 +7,15 @@ namespace Techieni3\LaravelUserPermissions\Providers;
 use Closure;
 use Illuminate\Contracts\Auth\Access\Authorizable;
 use Illuminate\Contracts\Auth\Access\Gate;
+use Illuminate\Contracts\Http\Kernel;
+use Illuminate\Routing\Router;
 use Illuminate\Support\ServiceProvider;
 use Techieni3\LaravelUserPermissions\Commands\GeneratePermissionsCommand;
 use Techieni3\LaravelUserPermissions\Commands\GenerateRolesCommand;
 use Techieni3\LaravelUserPermissions\Commands\InstallPermissions;
+use Techieni3\LaravelUserPermissions\Middlewares\PermissionMiddleware;
+use Techieni3\LaravelUserPermissions\Middlewares\RoleMiddleware;
+use Techieni3\LaravelUserPermissions\Middlewares\RoleOrPermissionMiddleware;
 
 class PermissionsServiceProvider extends ServiceProvider
 {
@@ -27,6 +32,19 @@ class PermissionsServiceProvider extends ServiceProvider
         }
 
         $this->callAfterResolving(Gate::class, $this->setupGateBeforeCallback());
+        $this->registerMiddleware();
+    }
+
+    /**
+     * Register the package middleware.
+     */
+    protected function registerMiddleware(): void
+    {
+        $router = $this->app->make(Router::class);
+
+        $router->aliasMiddleware('role', RoleMiddleware::class);
+        $router->aliasMiddleware('permission', PermissionMiddleware::class);
+        $router->aliasMiddleware('role_or_permission', RoleOrPermissionMiddleware::class);
     }
 
     public function register(): void

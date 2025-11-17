@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Techieni3\LaravelUserPermissions\Traits;
 
 use BackedEnum;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Facades\Config;
@@ -44,6 +45,56 @@ trait HasRoles
     }
 
     /**
+     * Scope the model query to only include models with specific role(s).
+     *
+     * @param  Builder  $query
+     * @param  string|array|BackedEnum  $roles
+     * @return Builder
+     */
+    public function scopeRole(Builder $query, string|array|BackedEnum $roles): Builder
+    {
+        $roles = is_array($roles) ? $roles : [$roles];
+
+        // Convert to role values
+        $roleValues = array_map(function ($role) {
+            if ($role instanceof BackedEnum) {
+                return $role->value;
+            }
+
+            return $role;
+        }, $roles);
+
+        return $query->whereHas('roles', function (Builder $q) use ($roleValues) {
+            $q->whereIn('name', $roleValues);
+        });
+    }
+
+    /**
+     * Scope the model query to exclude models with specific role(s).
+     *
+     * @param  Builder  $query
+     * @param  string|array|BackedEnum  $roles
+     * @return Builder
+     */
+    public function scopeWithoutRole(Builder $query, string|array|BackedEnum $roles): Builder
+    {
+        $roles = is_array($roles) ? $roles : [$roles];
+
+        // Convert to role values
+        $roleValues = array_map(function ($role) {
+            if ($role instanceof BackedEnum) {
+                return $role->value;
+            }
+
+            return $role;
+        }, $roles);
+
+        return $query->whereDoesntHave('roles', function (Builder $q) use ($roleValues) {
+            $q->whereIn('name', $roleValues);
+        });
+    }
+
+    /**
      * Check if the user has a specific role.
      * Uses request-level cache to avoid multiple DB queries within the same request.
      */
@@ -63,9 +114,10 @@ trait HasRoles
     /**
      * Add a role to the user.
      *
+     * @return static
      * @throws RuntimeException If the role is already assigned, enum file is missing, or role is not synced with the database.
      */
-    public function addRole(string|BackedEnum $role): void
+    public function addRole(string|BackedEnum $role): static
     {
         // Check if the user already has the role
         if ($this->hasRole($role)) {
@@ -84,14 +136,17 @@ trait HasRoles
         // Clear cached roles and permissions (since roles grant permissions)
         $this->flushRolesCache();
         $this->flushPermissionsCache();
+
+        return $this;
     }
 
     /**
      * Remove a role from the user.
      *
+     * @return static
      * @throws RuntimeException If the role is not assigned to the user.
      */
-    public function removeRole(string|BackedEnum $role): void
+    public function removeRole(string|BackedEnum $role): static
     {
         // Check if the user has the role
         if ( ! $this->hasRole($role)) {
@@ -110,15 +165,18 @@ trait HasRoles
         // Clear cached roles and permissions (since roles grant permissions)
         $this->flushRolesCache();
         $this->flushPermissionsCache();
+
+        return $this;
     }
 
     /**
      * Sync roles with the user (removes all existing roles and adds new ones).
      *
      * @param  array<string|BackedEnum>  $roles
+     * @return static
      * @throws RuntimeException If any role is not synced with the database.
      */
-    public function syncRoles(array $roles): void
+    public function syncRoles(array $roles): static
     {
         $roleIds = [];
 
@@ -133,6 +191,8 @@ trait HasRoles
         // Clear cached roles and permissions (since roles grant permissions)
         $this->flushRolesCache();
         $this->flushPermissionsCache();
+
+        return $this;
     }
 
     /**
