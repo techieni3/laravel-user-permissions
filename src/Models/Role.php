@@ -21,14 +21,14 @@ class Role extends Model
 
     public function permissions(): BelongsToMany
     {
-        return $this->belongsToMany(Permission::class);
+        return $this->belongsToMany(Permission::class, 'roles_permissions', 'role_id', 'permission_id');
     }
 
     protected function casts(): array
     {
-        if (class_exists(\App\Enums\Role::class)) {
+        if (class_exists(config('permissions.role_enum'))) {
             return [
-                'name' => \App\Enums\Role::class,
+                'name' => config('permissions.role_enum'),
             ];
         }
 

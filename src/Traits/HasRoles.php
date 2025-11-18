@@ -252,7 +252,7 @@ trait HasRoles
             return $role;
         }
 
-        $roleEnumPath = Config::string('permissions.role_enum_file');
+        $roleEnumPath = Config::string('permissions.role_enum');
         $this->verifyRoleEnumFile($roleEnumPath);
 
         /** @var class-string $roleEnumClass */

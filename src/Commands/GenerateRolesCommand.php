@@ -18,7 +18,7 @@ class GenerateRolesCommand extends Command
 
     public function handle(): void
     {
-        $roleEnumPath = Config::string('permissions.role_enum_file');
+        $roleEnumPath = Config::string('permissions.role_enum');
 
         if ( ! File::exists($roleEnumPath)) {
             $this->error(
@@ -67,6 +67,8 @@ class GenerateRolesCommand extends Command
         $contents = file_get_contents($filePath);
 
         if ($contents === false) {
+            $this->error("Failed to read file: {$filePath}");
+
             return null;
         }
 

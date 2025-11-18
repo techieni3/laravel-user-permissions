@@ -20,7 +20,7 @@ afterEach(function (): void {
 it('should install the package', function (): void {
     // Set user model path
     $userModelPath = workbench_path('app/Models/User.php');
-    $this->app['config']->set('permissions.user_model_file', $userModelPath);
+    $this->app['config']->set('permissions.user_model', $userModelPath);
 
     // Mock the File facade to avoid actual file operations during testing
     File::shouldReceive('exists')->andReturn(false);

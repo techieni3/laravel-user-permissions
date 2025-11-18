@@ -47,9 +47,9 @@ class PackageTestCase extends TestCase
                 'prefix' => '',
             ]);
 
-            $config->set('permissions.models_directory', workbench_path('app/Models'));
-            $config->set('permissions.role_enum_file', workbench_path('app/Enums/Role.php'));
-            $config->set('permissions.user_model_file', workbench_path('app/Models/User.php'));
+            $config->set('permissions.models_path', workbench_path('app/Models'));
+            $config->set('permissions.role_enum', workbench_path('app/Enums/Role.php'));
+            $config->set('permissions.user_model', workbench_path('app/Models/User.php'));
         });
     }
 }

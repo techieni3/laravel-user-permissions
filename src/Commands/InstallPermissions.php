@@ -97,7 +97,7 @@ class InstallPermissions extends Command
      */
     private function checkUserModelExists(): void
     {
-        $userModelPath = config('permissions.user_model_file');
+        $userModelPath = config('permissions.user_model');
 
         if ( ! file_exists($userModelPath)) {
             $this->fail('User model file not found. Please update the config file.');
@@ -106,7 +106,7 @@ class InstallPermissions extends Command
 
     private function addHasRolesTraitToUserModel(): void
     {
-        $userModelPath = config('permissions.user_model_file');
+        $userModelPath = config('permissions.user_model');
 
         $userModel = File::get($userModelPath);
 
@@ -143,7 +143,7 @@ class InstallPermissions extends Command
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Techieni3\LaravelUserPermissions\Traits\HasRoles;
 EOT,
-            file: config('permissions.user_model_file')
+            file: config('permissions.user_model')
         );
     }
 
@@ -162,7 +162,7 @@ class User extends Authenticatable implements MustVerifyEmail
 {
     use HasRoles;
 EOT,
-            file: config('permissions.user_model_file')
+            file: config('permissions.user_model')
         );
     }
 
@@ -180,7 +180,7 @@ class User extends Authenticatable
 {
     use HasRoles;
 EOT,
-            file: config('permissions.user_model_file')
+            file: config('permissions.user_model')
         );
     }
 

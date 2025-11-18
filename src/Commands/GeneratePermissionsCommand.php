@@ -18,7 +18,7 @@ class GeneratePermissionsCommand extends Command
 
     public function handle(): void
     {
-        $modelFiles = File::allFiles(Config::string('permissions.models_directory'));
+        $modelFiles = File::allFiles(Config::string('permissions.models_path'));
 
         $excludedModels = Config::array('permissions.excluded_models', []);
         $excludedModelsBaseNames = array_map(static function ($model) {
