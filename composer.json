@@ -3,7 +3,6 @@
     "description": "A Laravel package for managing user permissions.",
     "type": "library",
     "license": "MIT",
-    "version": "1.0.0",
     "authors": [
         {
             "role": "Developer",
@@ -12,14 +11,17 @@
         }
     ],
     "require": {
-        "php": "^8.3",
-        "laravel/framework": "^11.0"
+        "php": "^8.4",
+        "illuminate/console": "^12.0",
+        "illuminate/contracts": "^12.0",
+        "illuminate/database": "^12.0",
+        "illuminate/support": "^12.0"
     },
     "require-dev": {
-        "laravel/pint": "^1.17",
-        "orchestra/testbench": "^9.4",
-        "pestphp/pest": "^3.0",
-        "phpstan/phpstan": "^1.12"
+        "laravel/pint": "^1.25",
+        "orchestra/testbench": "^10.0",
+        "pestphp/pest": "^4.0",
+        "phpstan/phpstan": "^2.1"
     },
     "autoload": {
         "psr-4": {
