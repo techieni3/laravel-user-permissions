@@ -31,10 +31,9 @@ class GenerateRolesCommand extends Command
         $createdCount = 0;
         $existingCount = 0;
 
-        require_once $roleEnumPath;
-
+        $namespace = $this->getPhpNamespace($roleEnumPath);
         $enumClassName = basename($roleEnumPath, '.php');
-        $roleEnumClass = 'App\\Enums\\' . $enumClassName;
+        $roleEnumClass = $namespace . '\\' . $enumClassName;
 
         if ( ! class_exists($roleEnumClass)) {
             $this->error('Role enum class not found. Please make sure it\'s defined correctly.');
@@ -61,5 +60,20 @@ class GenerateRolesCommand extends Command
         $this->info('Roles generation completed.');
         $this->info("Created: {$createdCount}");
         $this->info("Already existing: {$existingCount}");
+    }
+
+    private function getPhpNamespace(string $filePath): ?string
+    {
+        $contents = file_get_contents($filePath);
+
+        if ($contents === false) {
+            return null;
+        }
+
+        if (preg_match('/^\s*namespace\s+([^;]+);/m', $contents, $matches)) {
+            return mb_trim($matches[1]);
+        }
+
+        return null;
     }
 }
