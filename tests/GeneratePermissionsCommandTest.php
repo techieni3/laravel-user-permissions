@@ -5,7 +5,7 @@ declare(strict_types=1);
 use Workbench\App\Models\Admin;
 use Workbench\App\Models\User;
 
-it('It generate permission for models', function (): void {
+it('generate permission for models', function (): void {
 
     $this->artisan('sync:permissions')
         ->assertExitCode(0);
@@ -15,7 +15,7 @@ it('It generate permission for models', function (): void {
     ]);
 });
 
-it('It ignore permission generation for model if it is excluded', function (): void {
+it('ignore permission generation for model if it is excluded', function (): void {
 
     $this->app['config']->set('permissions.excluded_models', [
         User::class,

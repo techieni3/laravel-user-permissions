@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-it('It generate roles from Role enum', function (): void {
+it('generate roles from Role enum', function (): void {
 
     $this->artisan('sync:roles')
         ->assertExitCode(0);

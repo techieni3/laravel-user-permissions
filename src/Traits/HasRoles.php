@@ -51,7 +51,7 @@ trait HasRoles
         }
 
         return $this->roles
-            ?->map(fn (Role $role) => $role->name->value)
+            ?->map(fn (Role $role) => $role->name)
             ?->contains($roleString);
     }
 

@@ -17,7 +17,7 @@ afterEach(function (): void {
     }
 });
 
-it('It should install the package', function (): void {
+it('should install the package', function (): void {
     // Set user model path
     $userModelPath = workbench_path('app/Models/User.php');
     $this->app['config']->set('permissions.user_model_file', $userModelPath);
@@ -33,7 +33,7 @@ it('It should install the package', function (): void {
     $this->artisan('install:permissions')->assertExitCode(0);
 });
 
-it('It publishes config file', function (): void {
+it('publishes config file', function (): void {
     $targetConfigPath = $this->app->basePath('config/permissions.php');
     $targetStubsPath = $this->app->basePath('app/Enums');
 
@@ -46,7 +46,7 @@ it('It publishes config file', function (): void {
     expect($targetConfigPath)->toBeFile();
 });
 
-it('It force overwrites config file', function (): void {
+it('force overwrites config file', function (): void {
     $targetConfigPath = $this->app->basePath('config/permissions.php');
     $targetStubsPath = $this->app->basePath('app/Enums');
 
@@ -60,7 +60,7 @@ it('It force overwrites config file', function (): void {
     expect($targetConfigPath)->toBeFile();
 });
 
-it('It publishes Role enum', function (): void {
+it('publishes Role enum', function (): void {
     $targetConfigPath = $this->app->basePath('config/permissions.php');
     $targetStubsPath = $this->app->basePath('app/Enums');
 
@@ -73,7 +73,7 @@ it('It publishes Role enum', function (): void {
     expect("{$targetStubsPath}/Role.php")->toBeFile();
 });
 
-it('It force publishes Role enum', function (): void {
+it('force publishes Role enum', function (): void {
     $targetConfigPath = $this->app->basePath('config/permissions.php');
     $targetStubsPath = $this->app->basePath('app/Enums');
 
@@ -86,7 +86,7 @@ it('It force publishes Role enum', function (): void {
     expect("{$targetStubsPath}/Role.php")->toBeFile();
 });
 
-it('It publishes migrations', function (): void {
+it('publishes migrations', function (): void {
     $targetConfigPath = $this->app->basePath('config/permissions.php');
     $targetStubsPath = $this->app->basePath('app/Enums');
     $migrationsPath = $this->app->basePath('database/migrations');
