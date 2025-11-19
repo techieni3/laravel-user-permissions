@@ -18,7 +18,15 @@ class GeneratePermissionsCommand extends Command
 
     public function handle(): void
     {
-        $modelFiles = File::allFiles(Config::string('permissions.models_path'));
+        $modelsPath = Config::string('permissions.models_path');
+
+        if ( ! $modelsPath || ! File::isDirectory($modelsPath)) {
+            $this->error('Models directory not found. Please check your permissions.models_path config.');
+
+            return;
+        }
+
+        $modelFiles = File::allFiles($modelsPath);
 
         $excludedModels = Config::array('permissions.excluded_models', []);
         $excludedModelsBaseNames = array_map(static function ($model) {

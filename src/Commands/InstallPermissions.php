@@ -6,6 +6,7 @@ namespace Techieni3\LaravelUserPermissions\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
+use ReflectionClass;
 use Throwable;
 
 class InstallPermissions extends Command
@@ -14,11 +15,15 @@ class InstallPermissions extends Command
 
     protected $description = 'Install and publish permissions package files';
 
+    private ?string $userModelPath = null;
+
     /**
      * @throws Throwable when the user model file is not found
      */
     public function handle(): void
     {
+        $this->userModelPath = $this->getClassFilePath(config('permissions.user_model'));
+
         $this->checkUserModelExists();
         $this->publishConfig();
         $this->publishMigrations();
@@ -97,18 +102,18 @@ class InstallPermissions extends Command
      */
     private function checkUserModelExists(): void
     {
-        $userModelPath = config('permissions.user_model');
+        if ($this->userModelPath === null) {
+            $this->fail('User model file not found. Please update the config file.');
+        }
 
-        if ( ! file_exists($userModelPath)) {
+        if ( ! file_exists($this->userModelPath)) {
             $this->fail('User model file not found. Please update the config file.');
         }
     }
 
     private function addHasRolesTraitToUserModel(): void
     {
-        $userModelPath = config('permissions.user_model');
-
-        $userModel = File::get($userModelPath);
+        $userModel = File::get($this->userModelPath);
 
         if (str_contains($userModel, 'use Techieni3\LaravelUserPermissions\Traits\HasRoles;')) {
             $this->info('User model already has the HasRoles trait.');
@@ -190,5 +195,26 @@ EOT,
             $file,
             str_replace($search, $replace, (string) file_get_contents($file))
         );
+    }
+
+    /**
+     * Get the file path from a class reference.
+     *
+     * @param  string  $className  Fully qualified class name
+     * @return string|null File path or null if class doesn't exist
+     */
+    private function getClassFilePath(string $className): ?string
+    {
+        if ( ! class_exists($className)) {
+            return null;
+        }
+
+        try {
+            $reflection = new ReflectionClass($className);
+
+            return $reflection->getFileName() ?: null;
+        } catch (Throwable) {
+            return null;
+        }
     }
 }

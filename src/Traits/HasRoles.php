@@ -5,13 +5,16 @@ declare(strict_types=1);
 namespace Techieni3\LaravelUserPermissions\Traits;
 
 use BackedEnum;
+use Exception;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Config;
-use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\DB;
 use RuntimeException;
 use Techieni3\LaravelUserPermissions\Models\Role;
+use Throwable;
 
 trait HasRoles
 {
@@ -80,23 +83,26 @@ trait HasRoles
     /**
      * Add a role to the user.
      *
-     * @throws RuntimeException If the role is already assigned, enum file is missing, or role is not synced with the database.
+     * @throws RuntimeException If the role doesn't exist or is already assigned.
      */
     public function addRole(string|BackedEnum $role): static
     {
-        // Check if the user already has the role
-        if ($this->hasRole($role)) {
-            throw new RuntimeException('Role is already assigned to the user.');
-        }
-
         // Convert string role to BackedEnum if necessary
         $roleEnum = $this->convertToRoleEnum($role);
 
         // Verify role exists in the database
         $dbRole = $this->verifyRoleInDatabase($roleEnum);
 
-        // Attach the role to the user
-        $this->roles()->attach($dbRole);
+        try {
+            // Attach the role to the user (database constraint handles duplicate check)
+            $this->roles()->attach($dbRole);
+        } catch (QueryException $e) {
+            // Duplicate entry error (integrity constraint violation)
+            if ($e->getCode() === '23000') {
+                throw new RuntimeException("Role '{$roleEnum->value}' is already assigned to the user.");
+            }
+            throw $e;
+        }
 
         // Clear cached roles and permissions (since roles grant permissions)
         $this->flushRolesCache();
@@ -108,23 +114,27 @@ trait HasRoles
     /**
      * Remove a role from the user.
      *
-     * @throws RuntimeException If the role is not assigned to the user.
+     * @throws RuntimeException If the role doesn't exist or is not assigned.
      */
     public function removeRole(string|BackedEnum $role): static
     {
-        // Check if the user has the role
-        if ( ! $this->hasRole($role)) {
-            throw new RuntimeException('Role is not assigned to the user.');
-        }
-
         // Convert string role to BackedEnum if necessary
         $roleEnum = $this->convertToRoleEnum($role);
 
         // Verify role exists in the database
         $dbRole = $this->verifyRoleInDatabase($roleEnum);
 
-        // Detach the role from the user
-        $this->roles()->detach($dbRole);
+        try {
+            // Detach and check if any rows were affected
+            $detached = $this->roles()->detach($dbRole->id);
+            if ($detached === 0) {
+                throw new RuntimeException("Role '{$roleEnum->value}' is not assigned to the user.");
+            }
+        } catch (Exception $e) {
+            throw new RuntimeException(
+                "Role '{$roleEnum->value}' is not synced with the database. Please run \"php artisan sync:roles\" first."
+            );
+        }
 
         // Clear cached roles and permissions (since roles grant permissions)
         $this->flushRolesCache();
@@ -138,23 +148,34 @@ trait HasRoles
      *
      * @param  array<string|BackedEnum>  $roles
      *
-     * @throws RuntimeException If any role is not synced with the database.
+     * @throws RuntimeException|Throwable If any role is not synced with the database.
      */
     public function syncRoles(array $roles): static
     {
-        $roleIds = [];
+        DB::transaction(function () use ($roles): void {
+            // Convert all roles to enums
+            $roleEnums = array_map(
+                fn ($role) => $this->convertToRoleEnum($role),
+                $roles
+            );
 
-        foreach ($roles as $role) {
-            $roleEnum = $this->convertToRoleEnum($role);
-            $dbRole = $this->verifyRoleInDatabase($roleEnum);
-            $roleIds[] = $dbRole->id;
-        }
+            // Verify all roles in a single query
+            $dbRoles = $this->verifyRoleInDatabase($roleEnums);
+            $roleIds = $dbRoles->pluck('id')->all();
 
-        $this->roles()->sync($roleIds);
+            // Detach all existing roles
+            $this->roles()->detach();
+            // Bulk attach all new roles
+            if (count($roleIds) > 0) {
+                $this->roles()->attach($roleIds);
+            }
+        });
 
-        // Clear cached roles and permissions (since roles grant permissions)
-        $this->flushRolesCache();
-        $this->flushPermissionsCache();
+        DB::afterCommit(function (): void {
+            // Clear cached roles and permissions (since roles grant permissions)
+            $this->flushRolesCache();
+            $this->flushPermissionsCache();
+        });
 
         return $this;
     }
@@ -172,7 +193,7 @@ trait HasRoles
         }
 
         return $this->getCachedRoles()
-            ->map(fn (Role $role) => $role->name)
+            ->map(fn (Role $role) => $role->name->value)
             ->contains($roleString);
     }
 
@@ -226,7 +247,6 @@ trait HasRoles
         $this->cachedRoles = null;
     }
 
-    // 6. Protected Methods (helpers)
     /**
      * Get cached roles or load them from database.
      * This ensures roles are only queried once per request.
@@ -240,11 +260,10 @@ trait HasRoles
         return $this->cachedRoles;
     }
 
-    // 7. Private Methods (utilities)
     /**
      * Convert a string role to a BackedEnum instance.
      *
-     * @throws RuntimeException If the enum file is missing or the role is invalid.
+     * @throws RuntimeException If the enum class is missing or the role is invalid.
      */
     private function convertToRoleEnum(string|BackedEnum $role): BackedEnum
     {
@@ -252,11 +271,10 @@ trait HasRoles
             return $role;
         }
 
-        $roleEnumPath = Config::string('permissions.role_enum');
-        $this->verifyRoleEnumFile($roleEnumPath);
-
         /** @var class-string $roleEnumClass */
-        $roleEnumClass = $this->getRoleEnumClass($roleEnumPath);
+        $roleEnumClass = Config::string('permissions.role_enum');
+        $this->verifyRoleEnumFile($roleEnumClass);
+
         $roleEnumInstance = $roleEnumClass::tryFrom($role);
 
         if ($roleEnumInstance === null) {
@@ -269,53 +287,57 @@ trait HasRoles
     }
 
     /**
-     * Verify that the role enum file exists.
+     * Verify that the role enum exists.
      *
-     * @throws RuntimeException If the enum file is missing.
+     * @throws RuntimeException If the enum class is missing.
      */
-    private function verifyRoleEnumFile(string $roleEnumPath): void
+    private function verifyRoleEnumFile(string $roleEnum): void
     {
-        if ( ! File::exists($roleEnumPath)) {
+        if ( ! class_exists($roleEnum) || ! enum_exists($roleEnum)) {
             throw new RuntimeException(
-                'Role enum not found in app/Enums folder. Please run "php artisan permissions:install" first.'
+                'Role enum not found. Please run "php artisan permissions:install" first.'
             );
         }
     }
 
     /**
-     * Get the fully qualified class name of the role enum.
+     * Verify that role(s) exist in the database.
      *
-     * @throws RuntimeException If the enum class is not found.
+     * @param  BackedEnum|array<BackedEnum>  $roleEnum
+     * @return Role|Collection<int, Role>
+     *
+     * @throws RuntimeException If any role is not synced with the database.
      */
-    private function getRoleEnumClass(string $roleEnumPath): string
+    private function verifyRoleInDatabase(BackedEnum|array $roleEnum): Role|Collection
     {
-        $enumClassName = basename($roleEnumPath, '.php');
-        $roleEnumClass = 'App\\Enums\\' . $enumClassName;
+        // Handle single role
+        if ($roleEnum instanceof BackedEnum) {
+            $dbRole = Role::query()->where('name', $roleEnum->value)->first();
 
-        if ( ! class_exists($roleEnumClass)) {
+            if ( ! $dbRole) {
+                throw new RuntimeException(
+                    "Role '{$roleEnum->value}' is not synced with the database. Please run \"php artisan sync:roles\" first."
+                );
+            }
+
+            return $dbRole;
+        }
+
+        // Handle multiple roles (bulk)
+        $roleValues = array_map(fn ($role) => $role->value, $roleEnum);
+        $dbRoles = Role::query()->whereIn('name', $roleValues)->get();
+
+        // Verify all roles were found
+        $foundNames = $dbRoles->pluck('name')->map(fn ($role) => $role->value)->all();
+        $missingRoles = array_diff($roleValues, $foundNames);
+
+        if (count($missingRoles) > 0) {
+            $missingList = implode(', ', $missingRoles);
             throw new RuntimeException(
-                'Role enum class not found. Please make sure it\'s defined correctly.'
+                "Roles [{$missingList}] are not synced with the database. Please run \"php artisan sync:roles\" first."
             );
         }
 
-        return $roleEnumClass;
-    }
-
-    /**
-     * Verify that the role exists in the database.
-     *
-     * @throws RuntimeException If the role is not synced with the database.
-     */
-    private function verifyRoleInDatabase(BackedEnum $roleEnum): Role
-    {
-        $dbRole = Role::query()->where('name', $roleEnum)->first();
-
-        if ( ! $dbRole) {
-            throw new RuntimeException(
-                'Role enum is not synced with the database. Please run "php artisan sync:roles" first.'
-            );
-        }
-
-        return $dbRole;
+        return $dbRoles;
     }
 }

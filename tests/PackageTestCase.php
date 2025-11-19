@@ -9,6 +9,8 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Orchestra\Testbench\TestCase;
 use Techieni3\LaravelUserPermissions\Providers\PermissionsServiceProvider;
+use Workbench\App\Enums\Role;
+use Workbench\App\Models\User;
 
 use function Orchestra\Testbench\package_path;
 use function Orchestra\Testbench\workbench_path;
@@ -48,8 +50,9 @@ class PackageTestCase extends TestCase
             ]);
 
             $config->set('permissions.models_path', workbench_path('app/Models'));
-            $config->set('permissions.role_enum', workbench_path('app/Enums/Role.php'));
-            $config->set('permissions.user_model', workbench_path('app/Models/User.php'));
+            $config->set('permissions.role_enum', Role::class);
+            $config->set('permissions.user_model', User::class);
+            $config->set('permissions.excluded_models', []);
         });
     }
 }

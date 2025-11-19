@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\File;
+use Workbench\App\Models\User;
 
 use function Orchestra\Testbench\workbench_path;
 
@@ -20,7 +21,7 @@ afterEach(function (): void {
 it('should install the package', function (): void {
     // Set user model path
     $userModelPath = workbench_path('app/Models/User.php');
-    $this->app['config']->set('permissions.user_model', $userModelPath);
+    $this->app['config']->set('permissions.user_model', User::class);
 
     // Mock the File facade to avoid actual file operations during testing
     File::shouldReceive('exists')->andReturn(false);

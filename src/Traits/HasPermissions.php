@@ -10,6 +10,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
 use Techieni3\LaravelUserPermissions\Models\Permission;
+use Throwable;
 
 trait HasPermissions
 {
@@ -19,37 +20,17 @@ trait HasPermissions
     protected ?Collection $cachedPermissions = null;
 
     /**
-     * Get all permissions for the user, including those granted through roles.
+     * Get all permissions those granted through roles.
      */
     public function permissions(): BelongsToMany
     {
-        $directPermissions = $this->belongsToMany(
-            related: Permission::class,
-            table: 'users_permissions',
-            foreignPivotKey: 'user_id',
-            relatedPivotKey: 'permission_id'
-        )
-            ->select(['permissions.*'])
-            ->withTimestamps();
-
-        $rolePermissions = $this->belongsToMany(
+        return $this->belongsToMany(
             related: Permission::class,
             table: 'roles_permissions',
             foreignPivotKey: 'role_id',
             relatedPivotKey: 'permission_id'
         )
-            ->join('users_roles', 'roles_permissions.role_id', '=', 'users_roles.role_id')
-            ->where('users_roles.user_id', $this->id)
-            ->select([
-                'permissions.*',
-                DB::raw('`users_roles`.`user_id` as `pivot_user_id`'),
-                DB::raw('`roles_permissions`.`permission_id` AS `pivot_permission_id`'),
-                DB::raw('`users_roles`.`created_at` AS `pivot_created_at`'),
-                DB::raw('`users_roles`.`updated_at` AS `pivot_updated_at`'),
-            ])
             ->withTimestamps();
-
-        return $directPermissions->union($rolePermissions);
     }
 
     /**
@@ -65,6 +46,27 @@ trait HasPermissions
             relatedPivotKey: 'permission_id'
         )
             ->withTimestamps();
+    }
+
+    /**
+     * Get all permissions for the user, including those granted through roles.
+     */
+    public function allPermissions(): Collection
+    {
+        $direct = DB::table('users_permissions')
+            ->join('permissions', 'permissions.id', '=', 'users_permissions.permission_id')
+            ->where('users_permissions.user_id', $this->id)
+            ->select('permissions.*');
+
+        $role = DB::table('users_roles')
+            ->join('roles_permissions', 'roles_permissions.role_id', '=', 'users_roles.role_id')
+            ->join('permissions', 'permissions.id', '=', 'roles_permissions.permission_id')
+            ->where('users_roles.user_id', $this->id)
+            ->select('permissions.*');
+
+        $rows = $direct->union($role)->get();
+
+        return Permission::hydrate($rows->all())->unique('id')->values();
     }
 
     /**
@@ -111,20 +113,21 @@ trait HasPermissions
 
     /**
      * Add a permission to the user.
+     * Only adds direct permissions. Prevents adding permissions already granted via roles.
      *
-     * @throws RuntimeException If the permission is already assigned, or permission is not synced with the database.
+     * @throws RuntimeException If the permission doesn't exist, is already directly assigned, or is granted via role.
      */
     public function addPermission(string $permission): static
     {
         $searchablePermission = $this->makePermissionName($permission);
 
+        // Get permission from the database
+        $dbPermission = $this->verifyPermissionInDatabase($searchablePermission);
+
         // Check if the user already has the permission
         if ($this->hasPermission($permission)) {
             throw new RuntimeException('Permission is already assigned to the user.');
         }
-
-        // Get permission from the database
-        $dbPermission = $this->verifyPermissionInDatabase($searchablePermission);
 
         // Attach the permission to the user
         $this->directPermissions()->attach($dbPermission);
@@ -137,23 +140,26 @@ trait HasPermissions
 
     /**
      * Remove a permission from the user.
+     * Only removes direct permissions, not permissions granted through roles.
      *
-     * @throws RuntimeException If the permission is not assigned to the user.
+     * @throws RuntimeException If the permission doesn't exist, is not directly assigned, or is granted via role.
      */
     public function removePermission(string $permission): static
     {
         $searchablePermission = $this->makePermissionName($permission);
 
-        // Check if the user has the permission
-        if ( ! $this->hasPermission($permission)) {
-            throw new RuntimeException('Permission is not assigned to the user.');
-        }
-
         // Get permission from the database
         $dbPermission = $this->verifyPermissionInDatabase($searchablePermission);
 
+        $directPermissionExists = $this->directPermissions()->where('permission_id', $dbPermission->id)->exists();
+
+        // Check if the user has the permission
+        if ( ! $directPermissionExists) {
+            throw new RuntimeException('Permission is not assigned to the user.');
+        }
+
         // Detach the permission from the user
-        $this->directPermissions()->detach($dbPermission);
+        $this->directPermissions()->detach($dbPermission->id);
 
         // Clear cached permissions
         $this->flushPermissionsCache();
@@ -166,22 +172,37 @@ trait HasPermissions
      *
      * @param  array<string>  $permissions
      *
-     * @throws RuntimeException If any permission is not synced with the database.
+     * @throws RuntimeException|Throwable If any permission is not synced with the database.
      */
     public function syncPermissions(array $permissions): static
     {
-        $permissionIds = [];
+        // Normalize all permission names
+        $searchablePermissions = array_map(
+            fn ($permission) => $this->makePermissionName($permission),
+            $permissions
+        );
 
-        foreach ($permissions as $permission) {
-            $searchablePermission = $this->makePermissionName($permission);
-            $dbPermission = $this->verifyPermissionInDatabase($searchablePermission);
-            $permissionIds[] = $dbPermission->id;
-        }
+        // Verify all permissions in a single query
+        $dbPermissions = $this->verifyPermissionInDatabase($searchablePermissions);
+        $permissionIds = $dbPermissions->pluck('id');
 
-        $this->directPermissions()->sync($permissionIds);
+        $rolePermissionExists = $this->permissions()->pluck('permissions.id')->all();
 
-        // Clear cached permissions
-        $this->flushPermissionsCache();
+        $idsToSync = $permissionIds->diff($rolePermissionExists)->all();
+
+        DB::transaction(function () use ($idsToSync): void {
+            // Detach all existing permissions
+            $this->directPermissions()->detach();
+            // Attach all new permissions
+            if (count($idsToSync) > 0) {
+                $this->directPermissions()->attach($idsToSync);
+            }
+        });
+
+        DB::afterCommit(function (): void {
+            // Clear cached permissions
+            $this->flushPermissionsCache();
+        });
 
         return $this;
     }
@@ -262,7 +283,7 @@ trait HasPermissions
     protected function getCachedPermissions(): Collection
     {
         if ($this->cachedPermissions === null) {
-            $this->cachedPermissions = $this->permissions()->get();
+            $this->cachedPermissions = $this->allPermissions();
         }
 
         return $this->cachedPermissions;
@@ -273,16 +294,43 @@ trait HasPermissions
         return mb_strtolower(str_replace([' ', '-'], '_', $permissionString));
     }
 
-    private function verifyPermissionInDatabase(string $searchablePermission): Permission
+    /**
+     * Verify that permission(s) exist in the database.
+     *
+     * @param  string|array<string>  $searchablePermission
+     * @return Permission|Collection<int, Permission>
+     *
+     * @throws RuntimeException If any permission is not synced with the database.
+     */
+    private function verifyPermissionInDatabase(string|array $searchablePermission): Permission|Collection
     {
-        $permission = Permission::query()->where('name', '=', $searchablePermission)->first();
+        // Handle single permission
+        if (is_string($searchablePermission)) {
+            $permission = Permission::query()->where('name', '=', $searchablePermission)->first();
 
-        if ( ! $permission) {
+            if ( ! $permission) {
+                throw new RuntimeException(
+                    "Permission '{$searchablePermission}' is not synced with the database. Please run \"php artisan sync:permissions\" first."
+                );
+            }
+
+            return $permission;
+        }
+
+        // Handle multiple permissions (bulk)
+        $permissions = Permission::query()->whereIn('name', $searchablePermission)->get();
+
+        // Verify all permissions were found
+        $foundNames = $permissions->pluck('name')->all();
+        $missingPermissions = array_diff($searchablePermission, $foundNames);
+
+        if (count($missingPermissions) > 0) {
+            $missingList = implode(', ', $missingPermissions);
             throw new RuntimeException(
-                'Permissions are not synced with the database. Please run "php artisan sync:permissions" first.'
+                "Permissions [{$missingList}] are not synced with the database. Please run \"php artisan sync:permissions\" first."
             );
         }
 
-        return $permission;
+        return $permissions;
     }
 }
