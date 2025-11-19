@@ -32,7 +32,7 @@ it('permission has many-to-many relationship with roles', function (): void {
 
     expect($permission->roles)->toHaveCount(2);
 
-    expect($permission->roles->pluck('name')->map(fn ($role) => $role->value)->toArray())->toContain(RoleEnum::Admin->value, RoleEnum::User->value);
+    expect($permission->roles->pluck('name')->map(static fn ($role) => $role->value)->toArray())->toContain(RoleEnum::Admin->value, RoleEnum::User->value);
 });
 
 it('user has many-to-many relationship with roles', function (): void {
@@ -43,7 +43,7 @@ it('user has many-to-many relationship with roles', function (): void {
     $roles = $user->roles()->get();
 
     expect($roles)->toHaveCount(2);
-    expect($roles->pluck('name')->map(fn ($role) => $role->value)->toArray())->toContain(RoleEnum::Admin->value, RoleEnum::User->value);
+    expect($roles->pluck('name')->map(static fn ($role) => $role->value)->toArray())->toContain(RoleEnum::Admin->value, RoleEnum::User->value);
 });
 
 it('user has many-to-many relationship with direct permissions', function (): void {

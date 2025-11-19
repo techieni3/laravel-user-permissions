@@ -159,6 +159,7 @@ it('removing role allows adding previously restricted permissions', function ():
 
     // Now should be able to add 'edit_post' directly
     $this->user->addPermission('edit_post');
+
     expect($this->user->directPermissions()->where('name', 'edit_post')->exists())->toBeTrue();
     expect($this->user->hasPermission('edit_post'))->toBeTrue();
 });

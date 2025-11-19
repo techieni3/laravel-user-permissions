@@ -50,7 +50,7 @@ class GeneratePermissionsCommand extends Command
         $modelFiles = File::allFiles($modelsPath);
 
         $excludedModels = Config::array('permissions.excluded_models', []);
-        $excludedModelsBaseNames = array_map(static function ($model) {
+        $excludedModelsBaseNames = array_map(static function ($model): string {
             $classParts = explode('\\', $model);
 
             return end($classParts);

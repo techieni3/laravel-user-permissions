@@ -8,6 +8,7 @@ use Closure;
 use Illuminate\Contracts\Auth\Access\Authorizable;
 use Illuminate\Contracts\Auth\Access\Gate;
 use Illuminate\Support\ServiceProvider;
+use Override;
 use Techieni3\LaravelUserPermissions\Commands\GeneratePermissionsCommand;
 use Techieni3\LaravelUserPermissions\Commands\GenerateRolesCommand;
 use Techieni3\LaravelUserPermissions\Commands\InstallPermissions;
@@ -45,6 +46,7 @@ class PermissionsServiceProvider extends ServiceProvider
      * Register any application services.
      * Merges the package configuration with the application configuration.
      */
+    #[Override]
     public function register(): void
     {
         $this->mergeConfigFrom(

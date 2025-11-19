@@ -72,7 +72,7 @@ trait HasRoles
         $roles = is_array($roles) ? $roles : [$roles];
 
         // Convert to role values
-        $roleValues = array_map(function ($role) {
+        $roleValues = array_map(function (BackedEnum|string $role): int|string {
             if ($role instanceof BackedEnum) {
                 return $role->value;
             }
@@ -98,7 +98,7 @@ trait HasRoles
         $roles = is_array($roles) ? $roles : [$roles];
 
         // Convert to role values
-        $roleValues = array_map(function ($role) {
+        $roleValues = array_map(function (BackedEnum|string $role): int|string {
             if ($role instanceof BackedEnum) {
                 return $role->value;
             }
@@ -131,12 +131,13 @@ trait HasRoles
         try {
             // Attach the role to the user (database constraint handles duplicate check)
             $this->roles()->attach($dbRole);
-        } catch (QueryException $e) {
+        } catch (QueryException $queryException) {
             // Duplicate entry error (integrity constraint violation)
-            if ($e->getCode() === '23000') {
-                throw new RuntimeException("Role '{$roleEnum->value}' is already assigned to the user.");
+            if ($queryException->getCode() === '23000') {
+                throw new RuntimeException("Role '{$roleEnum->value}' is already assigned to the user.", $queryException->getCode(), $queryException);
             }
-            throw $e;
+
+            throw $queryException;
         }
 
         // Clear cached roles and permissions (since roles grant permissions)
@@ -169,7 +170,7 @@ trait HasRoles
             if ($detached === 0) {
                 throw new RuntimeException("Role '{$roleEnum->value}' is not assigned to the user.");
             }
-        } catch (Exception $e) {
+        } catch (Exception) {
             throw new RuntimeException(
                 "Role '{$roleEnum->value}' is not synced with the database. Please run \"php artisan sync:roles\" first."
             );
@@ -196,7 +197,7 @@ trait HasRoles
         DB::transaction(function () use ($roles): void {
             // Convert all roles to enums
             $roleEnums = array_map(
-                fn ($role) => $this->convertToRoleEnum($role),
+                fn (BackedEnum|string $role) => $this->convertToRoleEnum($role),
                 $roles
             );
 
@@ -237,7 +238,7 @@ trait HasRoles
         }
 
         return $this->getCachedRoles()
-            ->map(fn (Role $role) => $role->name->value)
+            ->map(static fn (Role $role) => $role->name->value)
             ->contains($roleString);
     }
 
@@ -250,13 +251,7 @@ trait HasRoles
      */
     public function hasAnyRole(array $roles): bool
     {
-        foreach ($roles as $role) {
-            if ($this->hasRole($role)) {
-                return true;
-            }
-        }
-
-        return false;
+        return array_any($roles, fn ($role) => $this->hasRole($role));
     }
 
     /**
@@ -268,13 +263,7 @@ trait HasRoles
      */
     public function hasAllRoles(array $roles): bool
     {
-        foreach ($roles as $role) {
-            if ( ! $this->hasRole($role)) {
-                return false;
-            }
-        }
-
-        return true;
+        return array_all($roles, fn ($role) => $this->hasRole($role));
     }
 
     /**
@@ -386,14 +375,14 @@ trait HasRoles
         }
 
         // Handle multiple roles (bulk)
-        $roleValues = array_map(fn ($role) => $role->value, $roleEnum);
+        $roleValues = array_map(static fn (BackedEnum $role): int|string => $role->value, $roleEnum);
         $dbRoles = Role::query()->whereIn('name', $roleValues)->get();
 
         // Verify all roles were found
-        $foundNames = $dbRoles->pluck('name')->map(fn ($role) => $role->value)->all();
+        $foundNames = $dbRoles->pluck('name')->map(static fn ($role) => $role->value)->all();
         $missingRoles = array_diff($roleValues, $foundNames);
 
-        if (count($missingRoles) > 0) {
+        if ($missingRoles !== []) {
             $missingList = implode(', ', $missingRoles);
             throw new RuntimeException(
                 "Roles [{$missingList}] are not synced with the database. Please run \"php artisan sync:roles\" first."

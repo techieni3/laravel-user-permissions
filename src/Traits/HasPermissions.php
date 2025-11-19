@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Techieni3\LaravelUserPermissions\Traits;
 
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -83,16 +84,16 @@ trait HasPermissions
      * Scope the model query to only include models with specific permission(s).
      * Checks both direct permissions and permissions via roles.
      *
-     * @param  Builder<\Illuminate\Database\Eloquent\Model>  $query
+     * @param  Builder<Model>  $query
      * @param  string|array<string>  $permissions
-     * @return Builder<\Illuminate\Database\Eloquent\Model>
+     * @return Builder<Model>
      */
     public function scopePermission(Builder $query, string|array $permissions): Builder
     {
         $permissions = is_array($permissions) ? $permissions : [$permissions];
 
         // Normalize permission names
-        $permissionNames = array_map(fn ($p) => $this->makePermissionName($p), $permissions);
+        $permissionNames = array_map(fn (string $p) => $this->makePermissionName($p), $permissions);
 
         return $query->where(function (Builder $q) use ($permissionNames): void {
             // Check direct permissions
@@ -111,16 +112,16 @@ trait HasPermissions
      * Checks both direct permissions and permissions via roles.
      * Supports single or multiple permissions.
      *
-     * @param  Builder<\Illuminate\Database\Eloquent\Model>  $query
+     * @param  Builder<Model>  $query
      * @param  string|array<string>  $permissions  Single permission or array of permissions
-     * @return Builder<\Illuminate\Database\Eloquent\Model>
+     * @return Builder<Model>
      */
     public function scopeWithoutPermission(Builder $query, string|array $permissions): Builder
     {
         $permissions = is_array($permissions) ? $permissions : [$permissions];
 
         // Normalize permission names
-        $permissionNames = array_map(fn ($p) => $this->makePermissionName($p), $permissions);
+        $permissionNames = array_map(fn (string $p) => $this->makePermissionName($p), $permissions);
 
         return $query->whereDoesntHave('directPermissions', function (Builder $query) use ($permissionNames): void {
             $query->whereIn('name', $permissionNames);
@@ -203,7 +204,7 @@ trait HasPermissions
     {
         // Normalize all permission names
         $searchablePermissions = array_map(
-            fn ($permission) => $this->makePermissionName($permission),
+            fn (string $permission) => $this->makePermissionName($permission),
             $permissions
         );
 
@@ -243,7 +244,7 @@ trait HasPermissions
     public function hasPermission(string $permissionString): bool
     {
         return $this->getCachedPermissions()
-            ->map(fn (Permission $permission) => $permission->name)
+            ->map(static fn (Permission $permission) => $permission->name)
             ->contains($this->makePermissionName($permissionString));
     }
 
@@ -265,13 +266,7 @@ trait HasPermissions
      */
     public function hasAnyPermission(array $permissions): bool
     {
-        foreach ($permissions as $permission) {
-            if ($this->hasPermission($permission)) {
-                return true;
-            }
-        }
-
-        return false;
+        return array_any($permissions, fn ($permission) => $this->hasPermission($permission));
     }
 
     /**
@@ -281,13 +276,7 @@ trait HasPermissions
      */
     public function hasAllPermissions(array $permissions): bool
     {
-        foreach ($permissions as $permission) {
-            if ( ! $this->hasPermission($permission)) {
-                return false;
-            }
-        }
-
-        return true;
+        return array_all($permissions, fn ($permission) => $this->hasPermission($permission));
     }
 
     /**
@@ -385,7 +374,7 @@ trait HasPermissions
         $foundNames = $permissions->pluck('name')->all();
         $missingPermissions = array_diff($searchablePermission, $foundNames);
 
-        if (count($missingPermissions) > 0) {
+        if ($missingPermissions !== []) {
             $missingList = implode(', ', $missingPermissions);
             throw new RuntimeException(
                 "Permissions [{$missingList}] are not synced with the database. Please run \"php artisan sync:permissions\" first."

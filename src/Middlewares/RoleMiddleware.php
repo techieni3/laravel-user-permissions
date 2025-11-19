@@ -8,6 +8,7 @@ use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
 /**
  * Role Middleware.
@@ -26,7 +27,7 @@ class RoleMiddleware
      * @param  string  $role  The required role(s), separated by pipe (|) for multiple
      * @param  string|null  $guard  The authentication guard to use
      *
-     * @throws \Symfony\Component\HttpKernel\Exception\HttpException When unauthorized
+     * @throws HttpException When unauthorized
      */
     public function handle(Request $request, Closure $next, string $role, ?string $guard = null): Response
     {

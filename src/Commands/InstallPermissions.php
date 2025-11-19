@@ -68,10 +68,8 @@ class InstallPermissions extends Command
 
         $destinationPath = config_path('permissions.php');
 
-        if (File::exists($destinationPath)) {
-            if ( ! $this->confirm('The config file already exists. Do you want to overwrite it?')) {
-                return;
-            }
+        if (File::exists($destinationPath) && ! $this->confirm('The config file already exists. Do you want to overwrite it?')) {
+            return;
         }
 
         File::copy($configPath, $destinationPath);
@@ -125,10 +123,8 @@ class InstallPermissions extends Command
 
         $destinationPath = app_path('Enums/Role.php');
 
-        if (File::exists($destinationPath)) {
-            if ( ! $this->confirm('The Role.php file already exists. Do you want to overwrite it?')) {
-                return;
-            }
+        if (File::exists($destinationPath) && ! $this->confirm('The Role.php file already exists. Do you want to overwrite it?')) {
+            return;
         }
 
         File::copy($stubPath, $destinationPath);

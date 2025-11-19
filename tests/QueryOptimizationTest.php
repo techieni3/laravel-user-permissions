@@ -24,9 +24,9 @@ it('optimizes syncPermissions with single database query', function (): void {
     DB::disableQueryLog();
 
     // Filter to only SELECT queries for permissions table
-    $permissionQueries = array_filter($queries, fn ($query) => str_contains($query['query'], 'select') &&
-               str_contains($query['query'], 'permissions') &&
-               str_contains($query['query'], 'where "name" in'));
+    $permissionQueries = array_filter($queries, static fn (array $query): bool => str_contains((string) $query['query'], 'select') &&
+               str_contains((string) $query['query'], 'permissions') &&
+               str_contains((string) $query['query'], 'where "name" in'));
 
     expect($queries)->toHaveCount(4); // 4 queries for roles and permissions (see syncRoles test)
 
@@ -50,9 +50,9 @@ it('optimizes syncRoles with single database query', function (): void {
     DB::disableQueryLog();
 
     // Filter to only SELECT queries for roles table
-    $roleQueries = array_filter($queries, fn ($query) => str_contains($query['query'], 'select') &&
-               str_contains($query['query'], 'roles') &&
-               str_contains($query['query'], 'where "name" in'));
+    $roleQueries = array_filter($queries, static fn (array $query): bool => str_contains((string) $query['query'], 'select') &&
+               str_contains((string) $query['query'], 'roles') &&
+               str_contains((string) $query['query'], 'where "name" in'));
 
     // Should use a single whereIn query instead of 3 separate queries
     expect($roleQueries)->toHaveCount(1);
@@ -79,7 +79,7 @@ it('throws detailed error when bulk role verification fails', function (): void 
     // We'll test by trying to sync before database is populated
     DB::table('roles')->truncate();
 
-    expect(fn () => $user->syncRoles([Role::User]))
+    expect(static fn () => $user->syncRoles([Role::User]))
         ->toThrow(RuntimeException::class);
 });
 

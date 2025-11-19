@@ -40,7 +40,7 @@ class GenerateRolesCommand extends Command
         $roleEnum = Config::string('permissions.role_enum');
 
         if ( ! class_exists($roleEnum) || ! enum_exists($roleEnum)) {
-            $this->error('Role enum class not found. Please make sure it\'s defined correctly.');
+            $this->error("Role enum class not found. Please make sure it's defined correctly.");
 
             return;
         }
@@ -53,7 +53,7 @@ class GenerateRolesCommand extends Command
 
         foreach ($cases as $role) {
             $role = Role::query()->createOrFirst(
-                ['name' => mb_strtolower($role->value)],
+                ['name' => mb_strtolower((string) $role->value)],
                 ['display_name' => $role->name]
             );
 

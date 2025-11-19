@@ -110,7 +110,7 @@ it('permissions are not duplicated in getAllPermissions', function (): void {
     $user->addRole(RoleEnum::Admin);
 
     // Also add same permission directly
-    expect(fn () => $user->addPermission('create_admin'))->toThrow(RuntimeException::class);
+    expect(static fn () => $user->addPermission('create_admin'))->toThrow(RuntimeException::class);
 
     // Should not have duplicates
     $allPermissions = $user->getAllPermissions();
