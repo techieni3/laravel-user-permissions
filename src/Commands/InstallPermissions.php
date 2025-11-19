@@ -91,10 +91,13 @@ class InstallPermissions extends Command
 
         $files = File::allFiles($migrationPath);
 
+        $timestamp = date('Y_m_d_His');
+        $counter = 0;
         foreach ($files as $file) {
             $fileName = $file->getFilename();
-            $newFileName = date('Y_m_d_His_') . $fileName;
+            $newFileName = $timestamp . '_' . mb_str_pad((string) $counter, 2, '0', STR_PAD_LEFT) . '_' . $fileName;
             File::copy($file->getPathname(), $destinationPath . '/' . $newFileName);
+            $counter++;
         }
 
         $this->info('Migrations published successfully.');

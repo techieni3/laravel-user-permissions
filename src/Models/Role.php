@@ -7,6 +7,7 @@ namespace Techieni3\LaravelUserPermissions\Models;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use RuntimeException;
 
 /**
  * Role Model.
@@ -52,12 +53,14 @@ class Role extends Model
      */
     protected function casts(): array
     {
-        if (class_exists(config('permissions.role_enum'))) {
-            return [
-                'name' => config('permissions.role_enum'),
-            ];
+        $roleEnum = config('permissions.role_enum');
+
+        if ( ! class_exists($roleEnum)) {
+            throw new RuntimeException(
+                "Role enum '{$roleEnum}' not found. Please ensure it exists or run 'php artisan install:permissions'."
+            );
         }
 
-        return [];
+        return ['name' => $roleEnum];
     }
 }

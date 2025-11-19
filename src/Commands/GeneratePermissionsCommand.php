@@ -83,6 +83,7 @@ class GeneratePermissionsCommand extends Command
 
             Permission::query()->createOrFirst([
                 'name' => $permissionName,
+                'display_name' => ucwords(str_replace('_', ' ', $permissionName)),
             ]);
         }
     }

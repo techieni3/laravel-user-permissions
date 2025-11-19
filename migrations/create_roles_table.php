@@ -22,6 +22,8 @@ return new class extends Migration
             $table->foreignId('role_id');
             $table->timestamps();
 
+            $table->index('user_id');
+            $table->index('role_id');
             $table->unique(['user_id', 'role_id']);
         });
     }
@@ -29,6 +31,6 @@ return new class extends Migration
     public function down(): void
     {
         Schema::dropIfExists('roles');
-        Schema::dropIfExists('roles_users');
+        Schema::dropIfExists('users_roles');
     }
 };

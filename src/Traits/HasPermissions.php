@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use InvalidArgumentException;
 use RuntimeException;
 use Techieni3\LaravelUserPermissions\Models\Permission;
 use Throwable;
@@ -323,7 +324,19 @@ trait HasPermissions
      */
     protected function makePermissionName(string $permissionString): string
     {
-        return mb_strtolower(str_replace([' ', '-'], '_', $permissionString));
+        $normalized = mb_strtolower(str_replace([' ', '-'], '_', $permissionString));
+
+        if (in_array(mb_trim($normalized), ['', '0'], true)) {
+            throw new InvalidArgumentException('Permission name cannot be empty.');
+        }
+
+        if ( ! preg_match('/^[a-z0-9_]+$/', $normalized)) {
+            throw new InvalidArgumentException(
+                "Permission name '{$normalized}' contains invalid characters. Only lowercase letters, numbers, and underscores are allowed."
+            );
+        }
+
+        return $normalized;
     }
 
     /**
@@ -331,7 +344,7 @@ trait HasPermissions
      * This is used internally by syncPermissions() to prevent duplicate direct permissions.
      * Uses optimized join query for performance.
      *
-     * @return array<int> Array of permission IDs
+     * @return array<int, mixed> Array of permission IDs
      */
     protected function getPermissionIdsViaRoles(): array
     {

@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Techieni3\LaravelUserPermissions\Traits;
 
 use BackedEnum;
-use Exception;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
@@ -164,16 +163,9 @@ trait HasRoles
         // Verify role exists in the database
         $dbRole = $this->verifyRoleInDatabase($roleEnum);
 
-        try {
-            // Detach and check if any rows were affected
-            $detached = $this->roles()->detach($dbRole->id);
-            if ($detached === 0) {
-                throw new RuntimeException("Role '{$roleEnum->value}' is not assigned to the user.");
-            }
-        } catch (Exception) {
-            throw new RuntimeException(
-                "Role '{$roleEnum->value}' is not synced with the database. Please run \"php artisan sync:roles\" first."
-            );
+        $detached = $this->roles()->detach($dbRole->id);
+        if ($detached === 0) {
+            throw new RuntimeException("Role '{$roleEnum->value}' is not assigned to the user.");
         }
 
         // Clear cached roles and permissions (since roles grant permissions)
