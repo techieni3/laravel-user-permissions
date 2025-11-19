@@ -5,20 +5,46 @@ declare(strict_types=1);
 namespace Techieni3\LaravelUserPermissions\Commands;
 
 use Illuminate\Console\Command;
+use Illuminate\Contracts\Filesystem\FileNotFoundException;
 use Illuminate\Support\Facades\File;
 use ReflectionClass;
 use Throwable;
 
+/**
+ * Install Permissions Command.
+ *
+ * This command installs the permissions package by:
+ * - Publishing the configuration file
+ * - Publishing migrations
+ * - Creating the Role enum stub
+ * - Adding the HasRoles trait to the User model
+ */
 class InstallPermissions extends Command
 {
+    /**
+     * The name and signature of the console command.
+     *
+     * @var string
+     */
     protected $signature = 'install:permissions';
 
+    /**
+     * The console command description.
+     *
+     * @var string
+     */
     protected $description = 'Install and publish permissions package files';
 
+    /**
+     * The path to the user model file.
+     */
     private ?string $userModelPath = null;
 
     /**
-     * @throws Throwable when the user model file is not found
+     * Execute the console command.
+     * Performs all installation steps for the permissions package.
+     *
+     * @throws Throwable When the user model file is not found
      */
     public function handle(): void
     {
@@ -33,6 +59,9 @@ class InstallPermissions extends Command
         $this->info('Permissions package installed successfully!');
     }
 
+    /**
+     * Publish the package configuration file to the application's config directory.
+     */
     private function publishConfig(): void
     {
         $configPath = __DIR__ . '/../../config/permissions.php';
@@ -49,6 +78,9 @@ class InstallPermissions extends Command
         $this->info('Config file published successfully.');
     }
 
+    /**
+     * Publish the package migrations to the application's migrations directory.
+     */
     private function publishMigrations(): void
     {
         $migrationPath = __DIR__ . '/../../migrations';
@@ -70,6 +102,9 @@ class InstallPermissions extends Command
         $this->info('Migrations published successfully.');
     }
 
+    /**
+     * Create the Enums directory in the application if it doesn't exist.
+     */
     private function createEnumsFolder(): void
     {
         $enumsPath = app_path('Enums');
@@ -79,6 +114,9 @@ class InstallPermissions extends Command
         }
     }
 
+    /**
+     * Copy the Role enum stub to the application's Enums directory.
+     */
     private function copyRoleStub(): void
     {
         $this->createEnumsFolder();
@@ -98,7 +136,9 @@ class InstallPermissions extends Command
     }
 
     /**
-     * @throws Throwable
+     * Check if the User model file exists.
+     *
+     * @throws Throwable When the user model file is not found
      */
     private function checkUserModelExists(): void
     {
@@ -111,6 +151,12 @@ class InstallPermissions extends Command
         }
     }
 
+    /**
+     * Add the HasRoles trait to the User model.
+     * Detects the User model structure and adds the trait accordingly.
+     *
+     * @throws FileNotFoundException
+     */
     private function addHasRolesTraitToUserModel(): void
     {
         $userModel = File::get($this->userModelPath);
@@ -140,6 +186,9 @@ class InstallPermissions extends Command
         $this->warn('Unable to add HasRoles trait to User model. Please add it manually.');
     }
 
+    /**
+     * Add the HasRoles trait namespace import to the User model.
+     */
     private function addHasRolesTraitsNamespaceInUserModel(): void
     {
         $this->replaceInFile(
@@ -152,6 +201,9 @@ EOT,
         );
     }
 
+    /**
+     * Add HasRoles trait to User model that implements MustVerifyEmail.
+     */
     private function addHasRolesTraitForMustVerifyEmailImplementedUserModel(): void
     {
 
@@ -171,6 +223,9 @@ EOT,
         );
     }
 
+    /**
+     * Add HasRoles trait to User model that extends Authenticatable.
+     */
     private function addHasRolesTraitForAuthenticatableExtendedUserModel(): void
     {
         $this->addHasRolesTraitsNamespaceInUserModel();
@@ -189,6 +244,13 @@ EOT,
         );
     }
 
+    /**
+     * Replace content in a file.
+     *
+     * @param  string|array<string>  $search  The content to search for
+     * @param  string|array<string>  $replace  The replacement content
+     * @param  string  $file  The file path
+     */
     private function replaceInFile(string|array $search, string|array $replace, string $file): void
     {
         file_put_contents(

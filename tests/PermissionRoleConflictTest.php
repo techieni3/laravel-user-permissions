@@ -103,8 +103,8 @@ it('user can sync permissions that are not granted via role', function (): void 
     // Sync permissions not in role - should succeed
     $this->user->syncPermissions(['edit_post', 'create_post']);
 
-    expect($this->user->directPermissions()->count())->toBe(1);
-    expect($this->user->directPermissions()->where('name', 'edit_post')->exists())->toBeFalse();
+    expect($this->user->directPermissions()->count())->toBe(2);
+    expect($this->user->directPermissions()->where('name', 'edit_post')->exists())->toBeTrue();
     expect($this->user->directPermissions()->where('name', 'create_post')->exists())->toBeTrue();
 
     // Should not have 'view_post' directly (only via role)

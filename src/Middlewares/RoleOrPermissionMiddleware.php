@@ -8,13 +8,27 @@ use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
+/**
+ * Role Or Permission Middleware.
+ *
+ * This middleware ensures that the authenticated user has at least one of the specified
+ * roles OR permissions. It checks both roles and permissions, allowing access if either condition is met.
+ * Multiple values can be specified using a pipe (|) separator.
+ */
 class RoleOrPermissionMiddleware
 {
     /**
      * Handle an incoming request.
+     * Verifies the user is authenticated and has at least one of the required roles or permissions.
      *
-     * @param  Closure(Request): (Response)  $next
+     * @param  Request  $request  The incoming request
+     * @param  Closure(Request): (Response)  $next  The next middleware
+     * @param  string  $roleOrPermission  The required role(s) or permission(s), separated by pipe (|) for multiple
+     * @param  string|null  $guard  The authentication guard to use
+     *
+     * @throws HttpException When unauthorized
      */
     public function handle(Request $request, Closure $next, string $roleOrPermission, ?string $guard = null): Response
     {

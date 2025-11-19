@@ -4,8 +4,42 @@ declare(strict_types=1);
 
 namespace App\Enums;
 
+/**
+ * Role Enum.
+ *
+ * Defines all available user roles in the application.
+ * This enum is used by the laravel-user-permissions package to manage role assignments.
+ *
+ * Usage:
+ * - Add new roles by adding new enum cases
+ * - Role values should be lowercase
+ * - After adding new roles, run: php artisan sync:roles
+ *
+ * Example:
+ * ```php
+ * $user->addRole(Role::Admin);
+ * $user->hasRole(Role::User); // returns bool
+ * $user->syncRoles([Role::Admin, Role::User]);
+ * ```
+ *
+ * @package App\Enums
+ */
 enum Role: string
 {
+    /**
+     * Administrator role with full access.
+     * Typically has access to all features and settings.
+     */
     case Admin = 'admin';
+
+    /**
+     * Standard user role with limited access.
+     * Basic permissions for regular application users.
+     */
     case User = 'user';
+
+    // Add more roles here as needed:
+    // case Manager = 'manager';
+    // case Editor = 'editor';
+    // case Viewer = 'viewer';
 }

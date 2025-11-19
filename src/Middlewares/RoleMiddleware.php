@@ -9,12 +9,24 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\Response;
 
+/**
+ * Role Middleware.
+ *
+ * This middleware ensures that the authenticated user has at least one of the specified roles.
+ * Multiple roles can be specified using a pipe (|) separator.
+ */
 class RoleMiddleware
 {
     /**
      * Handle an incoming request.
+     * Verifies the user is authenticated and has the required role(s).
      *
-     * @param  Closure(Request): (Response)  $next
+     * @param  Request  $request  The incoming request
+     * @param  Closure(Request): (Response)  $next  The next middleware
+     * @param  string  $role  The required role(s), separated by pipe (|) for multiple
+     * @param  string|null  $guard  The authentication guard to use
+     *
+     * @throws \Symfony\Component\HttpKernel\Exception\HttpException When unauthorized
      */
     public function handle(Request $request, Closure $next, string $role, ?string $guard = null): Response
     {

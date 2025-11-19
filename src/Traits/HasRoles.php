@@ -8,6 +8,7 @@ use BackedEnum;
 use Exception;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Config;
@@ -16,17 +17,37 @@ use RuntimeException;
 use Techieni3\LaravelUserPermissions\Models\Role;
 use Throwable;
 
+/**
+ * HasRoles Trait.
+ *
+ * Provides role management functionality for models (typically User).
+ * This trait includes the HasPermissions trait to provide both role
+ * and permission management capabilities.
+ *
+ * Features:
+ * - Role assignment and removal
+ * - Role verification (hasRole, hasAnyRole, hasAllRoles)
+ * - Query scopes for filtering by roles
+ * - Request-level caching to prevent N+1 queries
+ * - Enum-based role management
+ */
 trait HasRoles
 {
     use HasPermissions;
 
     /**
      * Request-level cache for user roles.
+     * Prevents multiple database queries for the same user's roles within a single request.
+     *
+     * @var Collection<int, Role>|null
      */
     protected ?Collection $cachedRoles = null;
 
     /**
      * Get all roles for the user.
+     * Defines the many-to-many relationship between users and roles.
+     *
+     * @return BelongsToMany<Role>
      */
     public function roles(): BelongsToMany
     {
@@ -40,6 +61,11 @@ trait HasRoles
 
     /**
      * Scope the model query to only include models with specific role(s).
+     * Supports single or multiple roles, and accepts both string and BackedEnum values.
+     *
+     * @param  Builder<Model>  $query
+     * @param  string|array<string|BackedEnum>|BackedEnum  $roles  Single role or array of roles
+     * @return Builder<Model>
      */
     public function scopeRole(Builder $query, string|array|BackedEnum $roles): Builder
     {
@@ -61,6 +87,11 @@ trait HasRoles
 
     /**
      * Scope the model query to exclude models with specific role(s).
+     * Supports single or multiple roles, and accepts both string and BackedEnum values.
+     *
+     * @param  Builder<Model>  $query
+     * @param  string|array<string|BackedEnum>|BackedEnum  $roles  Single role or array of roles
+     * @return Builder<Model>
      */
     public function scopeWithoutRole(Builder $query, string|array|BackedEnum $roles): Builder
     {
@@ -82,8 +113,12 @@ trait HasRoles
 
     /**
      * Add a role to the user.
+     * Verifies the role exists in the database and isn't already assigned.
+     * Clears both role and permission caches after assignment.
      *
-     * @throws RuntimeException If the role doesn't exist or is already assigned.
+     * @param  string|BackedEnum  $role  The role to add (string or enum instance)
+     *
+     * @throws RuntimeException If the role doesn't exist or is already assigned
      */
     public function addRole(string|BackedEnum $role): static
     {
@@ -113,8 +148,12 @@ trait HasRoles
 
     /**
      * Remove a role from the user.
+     * Verifies the role exists and is currently assigned before removal.
+     * Clears both role and permission caches after removal.
      *
-     * @throws RuntimeException If the role doesn't exist or is not assigned.
+     * @param  string|BackedEnum  $role  The role to remove (string or enum instance)
+     *
+     * @throws RuntimeException If the role doesn't exist or is not assigned
      */
     public function removeRole(string|BackedEnum $role): static
     {
@@ -145,10 +184,12 @@ trait HasRoles
 
     /**
      * Sync roles with the user (removes all existing roles and adds new ones).
+     * Performs the operation in a database transaction for atomicity.
+     * Uses bulk operations for optimal performance when syncing multiple roles.
      *
-     * @param  array<string|BackedEnum>  $roles
+     * @param  array<string|BackedEnum>  $roles  Array of roles to sync
      *
-     * @throws RuntimeException|Throwable If any role is not synced with the database.
+     * @throws RuntimeException|Throwable If any role is not synced with the database
      */
     public function syncRoles(array $roles): static
     {
@@ -183,6 +224,9 @@ trait HasRoles
     /**
      * Check if the user has a specific role.
      * Uses request-level cache to avoid multiple DB queries within the same request.
+     *
+     * @param  string|BackedEnum  $role  The role to check (string or enum instance)
+     * @return bool True if the user has the role, false otherwise
      */
     public function hasRole(string|BackedEnum $role): bool
     {
@@ -199,8 +243,10 @@ trait HasRoles
 
     /**
      * Check if the user has any of the given roles.
+     * Returns true if the user has at least one of the specified roles.
      *
-     * @param  array<string|BackedEnum>  $roles
+     * @param  array<string|BackedEnum>  $roles  Array of roles to check
+     * @return bool True if user has at least one role, false otherwise
      */
     public function hasAnyRole(array $roles): bool
     {
@@ -215,8 +261,10 @@ trait HasRoles
 
     /**
      * Check if the user has all of the given roles.
+     * Returns true only if the user has every specified role.
      *
-     * @param  array<string|BackedEnum>  $roles
+     * @param  array<string|BackedEnum>  $roles  Array of roles to check
+     * @return bool True if user has all roles, false otherwise
      */
     public function hasAllRoles(array $roles): bool
     {
@@ -232,6 +280,8 @@ trait HasRoles
     /**
      * Get all roles for the user as a collection.
      * Uses request-level cache to avoid multiple DB queries within the same request.
+     *
+     * @return Collection<int, Role>
      */
     public function getAllRoles(): Collection
     {
@@ -240,7 +290,7 @@ trait HasRoles
 
     /**
      * Clear the request-level roles cache.
-     * Should be called after adding/removing/syncing roles.
+     * Should be called after adding/removing/syncing roles to ensure fresh data.
      */
     public function flushRolesCache(): void
     {
@@ -249,7 +299,9 @@ trait HasRoles
 
     /**
      * Get cached roles or load them from database.
-     * This ensures roles are only queried once per request.
+     * This ensures roles are only queried once per request for optimal performance.
+     *
+     * @return Collection<int, Role>
      */
     protected function getCachedRoles(): Collection
     {
@@ -262,8 +314,13 @@ trait HasRoles
 
     /**
      * Convert a string role to a BackedEnum instance.
+     * If already a BackedEnum, returns it unchanged.
+     * Validates that the role exists in the configured role enum.
      *
-     * @throws RuntimeException If the enum class is missing or the role is invalid.
+     * @param  string|BackedEnum  $role  The role to convert
+     * @return BackedEnum The role as a BackedEnum instance
+     *
+     * @throws RuntimeException If the enum class is missing or the role is invalid
      */
     private function convertToRoleEnum(string|BackedEnum $role): BackedEnum
     {
@@ -287,9 +344,12 @@ trait HasRoles
     }
 
     /**
-     * Verify that the role enum exists.
+     * Verify that the role enum class exists and is a valid enum.
+     * Checks both class existence and that it's actually an enum type.
      *
-     * @throws RuntimeException If the enum class is missing.
+     * @param  string  $roleEnum  The fully qualified class name of the role enum
+     *
+     * @throws RuntimeException If the enum class is missing or not a valid enum
      */
     private function verifyRoleEnumFile(string $roleEnum): void
     {
@@ -302,11 +362,13 @@ trait HasRoles
 
     /**
      * Verify that role(s) exist in the database.
+     * Handles both single role and bulk role verification.
+     * Uses optimized whereIn query for bulk operations.
      *
-     * @param  BackedEnum|array<BackedEnum>  $roleEnum
-     * @return Role|Collection<int, Role>
+     * @param  BackedEnum|array<BackedEnum>  $roleEnum  Single role or array of roles
+     * @return Role|Collection<int, Role> Single Role model or Collection of Roles
      *
-     * @throws RuntimeException If any role is not synced with the database.
+     * @throws RuntimeException If any role is not synced with the database
      */
     private function verifyRoleInDatabase(BackedEnum|array $roleEnum): Role|Collection
     {

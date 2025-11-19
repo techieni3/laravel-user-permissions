@@ -12,8 +12,20 @@ use Techieni3\LaravelUserPermissions\Commands\GeneratePermissionsCommand;
 use Techieni3\LaravelUserPermissions\Commands\GenerateRolesCommand;
 use Techieni3\LaravelUserPermissions\Commands\InstallPermissions;
 
+/**
+ * Permissions Service Provider.
+ *
+ * Registers and bootstraps the permissions package, including:
+ * - Console commands for managing permissions and roles
+ * - Gate integration for permission checking
+ * - Package configuration
+ */
 class PermissionsServiceProvider extends ServiceProvider
 {
+    /**
+     * Bootstrap any application services.
+     * Registers console commands and sets up the Gate integration.
+     */
     public function boot(): void
     {
         if ($this->app->runningInConsole()) {
@@ -29,6 +41,10 @@ class PermissionsServiceProvider extends ServiceProvider
         $this->callAfterResolving(Gate::class, $this->setupGateBeforeCallback());
     }
 
+    /**
+     * Register any application services.
+     * Merges the package configuration with the application configuration.
+     */
     public function register(): void
     {
         $this->mergeConfigFrom(
@@ -38,7 +54,10 @@ class PermissionsServiceProvider extends ServiceProvider
     }
 
     /**
-     * Register the permission check method on the gate.
+     * Register the permission check callback on the Gate.
+     * This integrates permission checking into Laravel's authorization system.
+     *
+     * @return Closure The Gate before callback
      */
     private function setupGateBeforeCallback(): Closure
     {

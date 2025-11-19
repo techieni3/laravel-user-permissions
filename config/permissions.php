@@ -19,7 +19,7 @@ return [
 
     // Excluded models that should NOT have permissions generated
     'excluded_models' => [
-        App\Models\User::class,
+        // App\Models\User::class,
     ],
 
     /*

@@ -9,16 +9,32 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 /**
- * @property int $id
- * @property string $name
- * @property string $display_name
- * @property Carbon $created_at
- * @property Carbon $updated_at
+ * Permission Model.
+ *
+ * Represents a permission that can be assigned to users directly
+ * or through roles. Permissions control access to specific actions
+ * or resources in the application.
+ *
+ * @property int $id The unique identifier for the permission
+ * @property string $name The unique name of the permission (lowercase with underscores)
+ * @property string $display_name The human-readable display name
+ * @property Carbon $created_at Timestamp when the permission was created
+ * @property Carbon $updated_at Timestamp when the permission was last updated
  */
 class Permission extends Model
 {
+    /**
+     * The attributes that aren't mass assignable.
+     *
+     * @var array<string>
+     */
     protected $guarded = ['id'];
 
+    /**
+     * Get the roles that have this permission.
+     *
+     * @return BelongsToMany<Role>
+     */
     public function roles(): BelongsToMany
     {
         return $this->belongsToMany(
