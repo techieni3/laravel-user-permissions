@@ -110,31 +110,34 @@ class GeneratePermissionsCommand extends Command
     }
 
     /**
-     * Extract the fully qualified class name from a PHP file.
+     * Extract the fully qualified class name from a PHP file using PSR-4 autoload mappings.
      *
      * @param  string  $filePath  The path to the PHP file
      * @return string|null The fully qualified class name, or null if not found
      */
     protected function getClassNameFromFile(string $filePath): ?string
     {
-        $contents = File::get($filePath);
+        $composerPath = base_path('composer.json');
 
-        $namespace = '';
-        $class = '';
-
-        if (preg_match('/namespace\s+([^;]+);/', $contents, $matches)) {
-            $namespace = $matches[1];
-        }
-
-        if (preg_match('/class\s+(\w+)/', $contents, $matches)) {
-            $class = $matches[1];
-        }
-
-        if ($class === '') {
+        if ( ! File::exists($composerPath)) {
             return null;
         }
 
-        return $namespace !== '' ? "{$namespace}\\{$class}" : $class;
+        $composer = json_decode(File::get($composerPath), true);
+        $psr4 = $composer['autoload']['psr-4'] ?? [];
+
+        foreach ($psr4 as $namespace => $path) {
+            $absolutePath = base_path(rtrim($path, '/'));
+
+            if (str_starts_with($filePath, $absolutePath)) {
+                $relativePath = substr($filePath, strlen($absolutePath) + 1);
+                $className = str_replace(['/', '.php'], ['\\', ''], $relativePath);
+
+                return rtrim($namespace, '\\') . '\\' . $className;
+            }
+        }
+
+        return null;
     }
 
     /**
