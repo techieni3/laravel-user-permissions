@@ -56,6 +56,8 @@ class GeneratePermissionsCommand extends Command
             return end($classParts);
         }, array_values($excludedModels));
 
+        $permissions = [];
+
         foreach ($modelFiles as $modelFile) {
             $modelName = $modelFile->getBasename('.php');
 
@@ -64,27 +66,36 @@ class GeneratePermissionsCommand extends Command
                 continue;
             }
 
-            $this->generatePermissionsForModel($modelName);
+            $permissions = [...$permissions, ...$this->getPermissionsForModel($modelName)];
+        }
+
+        if ($permissions !== []) {
+            Permission::query()->upsert($permissions, ['name']);
         }
 
         $this->info('Permissions generated successfully.');
     }
 
     /**
-     * Generate permissions for a specific model.
-     * Creates a permission for each action defined in ModelActions enum.
+     * Get a permissions array for a specific model.
+     * Returns permission data for each action defined in the ModelActions enum.
      *
      * @param  string  $modelName  The name of the model to generate permissions for
+     * @return array<int, array{name: string, display_name: string}>
      */
-    protected function generatePermissionsForModel(string $modelName): void
+    protected function getPermissionsForModel(string $modelName): array
     {
+        $permissions = [];
+
         foreach (ModelActions::list() as $action) {
             $permissionName = mb_strtolower("{$action}_{$modelName}");
 
-            Permission::query()->createOrFirst([
+            $permissions[] = [
                 'name' => $permissionName,
                 'display_name' => ucwords(str_replace('_', ' ', $permissionName)),
-            ]);
+            ];
         }
+
+        return $permissions;
     }
 }
