@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Techieni3\LaravelUserPermissions\Commands;
 
 use Illuminate\Console\Command;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\File;
 use Techieni3\LaravelUserPermissions\Enums\ModelActions;
@@ -64,6 +65,15 @@ class GeneratePermissionsCommand extends Command
                 continue;
             }
 
+            // Get fully qualified class name and verify it's a Model
+            $className = $this->getClassNameFromFile($modelFile->getPathname());
+
+            if ($className === null || ! $this->isModelClass($className)) {
+                $this->warn("Skipping {$modelName}: not a valid Eloquent Model class.");
+
+                continue;
+            }
+
             $this->generatePermissionsForModel($modelName);
         }
 
@@ -86,5 +96,48 @@ class GeneratePermissionsCommand extends Command
                 'display_name' => ucwords(str_replace('_', ' ', $permissionName)),
             ]);
         }
+    }
+
+    /**
+     * Extract the fully qualified class name from a PHP file.
+     *
+     * @param  string  $filePath  The path to the PHP file
+     * @return string|null The fully qualified class name, or null if not found
+     */
+    protected function getClassNameFromFile(string $filePath): ?string
+    {
+        $contents = File::get($filePath);
+
+        $namespace = '';
+        $class = '';
+
+        if (preg_match('/namespace\s+([^;]+);/', $contents, $matches)) {
+            $namespace = $matches[1];
+        }
+
+        if (preg_match('/class\s+(\w+)/', $contents, $matches)) {
+            $class = $matches[1];
+        }
+
+        if ($class === '') {
+            return null;
+        }
+
+        return $namespace !== '' ? "{$namespace}\\{$class}" : $class;
+    }
+
+    /**
+     * Check if a class is a valid Eloquent Model.
+     *
+     * @param  string  $className  The fully qualified class name
+     * @return bool True if the class is an Eloquent Model
+     */
+    protected function isModelClass(string $className): bool
+    {
+        if ( ! class_exists($className)) {
+            return false;
+        }
+
+        return is_subclass_of($className, Model::class);
     }
 }
