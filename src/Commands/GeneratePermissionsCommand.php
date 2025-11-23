@@ -35,6 +35,13 @@ class GeneratePermissionsCommand extends Command
     protected $description = 'Generate permissions for all models';
 
     /**
+     * Cached PSR-4 autoload mappings.
+     *
+     * @var array<string, string>
+     */
+    protected array $psr4Mappings = [];
+
+    /**
      * Execute the console command.
      * Scans the models directory and generates permissions for each model.
      */
@@ -47,6 +54,9 @@ class GeneratePermissionsCommand extends Command
 
             return;
         }
+
+        // Load PSR-4 mappings once
+        $this->loadPsr4Mappings();
 
         $modelFiles = File::allFiles($modelsPath);
 
@@ -110,6 +120,21 @@ class GeneratePermissionsCommand extends Command
     }
 
     /**
+     * Load PSR-4 autoload mappings from composer.json.
+     */
+    protected function loadPsr4Mappings(): void
+    {
+        $composerPath = base_path('composer.json');
+
+        if ( ! File::exists($composerPath)) {
+            return;
+        }
+
+        $composer = json_decode(File::get($composerPath), true);
+        $this->psr4Mappings = $composer['autoload']['psr-4'] ?? [];
+    }
+
+    /**
      * Extract the fully qualified class name from a PHP file using PSR-4 autoload mappings.
      *
      * @param  string  $filePath  The path to the PHP file
@@ -117,16 +142,7 @@ class GeneratePermissionsCommand extends Command
      */
     protected function getClassNameFromFile(string $filePath): ?string
     {
-        $composerPath = base_path('composer.json');
-
-        if ( ! File::exists($composerPath)) {
-            return null;
-        }
-
-        $composer = json_decode(File::get($composerPath), true);
-        $psr4 = $composer['autoload']['psr-4'] ?? [];
-
-        foreach ($psr4 as $namespace => $path) {
+        foreach ($this->psr4Mappings as $namespace => $path) {
             $absolutePath = base_path(rtrim($path, '/'));
 
             if (str_starts_with($filePath, $absolutePath)) {
