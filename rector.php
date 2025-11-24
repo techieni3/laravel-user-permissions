@@ -12,9 +12,9 @@ use Rector\Php55\Rector\String_\StringClassNameToClassConstantRector;
 
 return RectorConfig::configure()
     ->withPaths([
-        __DIR__ . '/migrations',
-        __DIR__ . '/src',
-        __DIR__ . '/tests',
+        __DIR__.'/migrations',
+        __DIR__.'/src',
+        __DIR__.'/tests',
     ])
     ->withRootFiles()
     ->withPhpSets()

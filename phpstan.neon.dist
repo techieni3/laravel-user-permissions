@@ -1,15 +1,14 @@
+includes:
+    - vendor/phpstan/phpstan/conf/bleedingEdge.neon
+
 parameters:
+    level: max
 
     paths:
-        - src/
-
-    level: 8
-
-    ignoreErrors:
-        - identifier: missingType.generics
-        - identifier: missingType.iterableValue
+        - src
 
     excludePaths:
 
-    scanDirectories:
-          - vendor/orchestra/testbench-core/laravel
+    treatPhpDocTypesAsCertain: false
+
+    tmpDir: /tmp/phpstan

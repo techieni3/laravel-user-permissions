@@ -1,27 +1,51 @@
 {
   "preset": "laravel",
   "rules": {
-    "align_multiline_comment": {
-      "comment_type": "all_multiline"
-    },
     "array_push": true,
     "assign_null_coalescing_to_coalesce_equal": true,
     "backtick_to_shell_exec": true,
     "combine_consecutive_issets": true,
     "combine_consecutive_unsets": true,
-    "concat_space": {
-      "spacing": "one"
-    },
     "date_time_immutable": true,
     "declare_strict_types": true,
     "explicit_indirect_variable": true,
     "explicit_string_variable": true,
-    "fully_qualified_strict_types": true,
+    "fully_qualified_strict_types": {
+      "phpdoc_tags": [
+        "param",
+        "phpstan-param",
+        "phpstan-property",
+        "phpstan-property-read",
+        "phpstan-property-write",
+        "phpstan-return",
+        "phpstan-var",
+        "property",
+        "property-read",
+        "property-write",
+        "psalm-param",
+        "psalm-property",
+        "psalm-property-read",
+        "psalm-property-write",
+        "psalm-return",
+        "psalm-var",
+        "return",
+        "see",
+        "throws",
+        "var",
+        "property",
+        "property-read",
+        "extends",
+        "method",
+        "mixin",
+        "use"
+      ]
+    },
     "global_namespace_import": {
       "import_classes": true,
       "import_constants": true,
       "import_functions": true
     },
+    "group_import": false,
     "is_null": true,
     "logical_operators": true,
     "mb_str_functions": true,
@@ -30,9 +54,12 @@
     },
     "modernize_strpos": true,
     "modernize_types_casting": true,
+    "new_with_parentheses": false,
     "no_empty_comment": true,
     "no_superfluous_elseif": true,
     "no_useless_else": true,
+    "no_useless_concat_operator": true,
+    "no_unused_imports": true,
     "not_operator_with_space": true,
     "ordered_class_elements": {
       "order": [
@@ -59,6 +86,34 @@
       ],
       "sort_algorithm": "none"
     },
+    "phpdoc_order": {
+      "order": [
+        "param",
+        "phpstan-param",
+        "phpstan-property",
+        "phpstan-property-read",
+        "phpstan-property-write",
+        "phpstan-return",
+        "phpstan-var",
+        "property",
+        "property-read",
+        "property-write",
+        "psalm-param",
+        "psalm-property",
+        "psalm-property-read",
+        "psalm-property-write",
+        "psalm-return",
+        "psalm-var",
+        "return",
+        "see",
+        "throws",
+        "var",
+        "extends",
+        "method",
+        "mixin",
+        "use"
+      ]
+    },
     "protected_to_private": true,
     "self_accessor": true,
     "simplified_if_return": true,
@@ -66,6 +121,7 @@
     "strict_comparison": true,
     "ternary_to_null_coalescing": true,
     "use_arrow_functions": true,
+    "visibility_required": true,
     "void_return": true
   }
 }

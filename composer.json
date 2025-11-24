@@ -52,6 +52,8 @@
         "serve": [
             "Composer\\Config::disableProcessTimeout",
             "@build",
+            "@php vendor/bin/testbench sync:permissions",
+            "@php vendor/bin/testbench sync:roles",
             "@php vendor/bin/testbench serve --ansi"
         ]
     },
