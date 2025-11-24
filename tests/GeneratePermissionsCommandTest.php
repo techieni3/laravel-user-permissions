@@ -11,8 +11,17 @@ it('generate permission for models', function (): void {
         ->assertExitCode(0);
 
     $this->assertDatabaseHas('permissions', [
-        'name' => 'create_admin',
+        'name' => 'admin.create',
     ]);
+});
+
+it('fails permission generation if modelAction enum is not defined', function (): void {
+    $this->app['config']->set('permissions.model_actions_enum', '');
+
+    $this->artisan('sync:permissions')
+        ->assertExitCode(1);
+
+    $this->assertDatabaseCount('permissions', 0);
 });
 
 it('ignore permission generation for model if it is excluded', function (): void {

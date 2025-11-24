@@ -12,8 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
  * Permission Model.
  *
  * Represents a permission that can be assigned to users directly
- * or through roles. Permissions control access to specific actions
- * or resources in the application.
+ * or through roles.
  *
  * @property int $id The unique identifier for the permission
  * @property string $name The unique name of the permission (lowercase with underscores)
@@ -24,7 +23,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 class Permission extends Model
 {
     /**
-     * The attributes that aren't mass assignable.
+     * The attributes that aren't mass-assignable.
      *
      * @var array<string>
      */
@@ -33,7 +32,7 @@ class Permission extends Model
     /**
      * Get the roles that have this permission.
      *
-     * @return BelongsToMany<Role>
+     * @return BelongsToMany<Role, $this>
      */
     public function roles(): BelongsToMany
     {

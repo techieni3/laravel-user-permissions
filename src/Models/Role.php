@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace Techieni3\LaravelUserPermissions\Models;
 
+use BackedEnum;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Support\Facades\Config;
 use RuntimeException;
 
 /**
@@ -16,7 +18,7 @@ use RuntimeException;
  * Roles can be assigned to users to grant them a set of permissions.
  *
  * @property int $id The unique identifier for the role
- * @property string $name The unique name of the role (lowercase)
+ * @property BackedEnum $name The unique name of the role (lowercase), cast to a role enum
  * @property string $display_name The human-readable display name
  * @property Carbon $created_at Timestamp when the role was created
  * @property Carbon $updated_at Timestamp when the role was last updated
@@ -24,7 +26,7 @@ use RuntimeException;
 class Role extends Model
 {
     /**
-     * The attributes that aren't mass assignable.
+     * The attributes that aren't mass-assignable.
      *
      * @var array<string>
      */
@@ -33,7 +35,7 @@ class Role extends Model
     /**
      * Get the permissions associated with this role.
      *
-     * @return BelongsToMany<Permission>
+     * @return BelongsToMany<Permission, $this>
      */
     public function permissions(): BelongsToMany
     {
@@ -53,7 +55,7 @@ class Role extends Model
      */
     protected function casts(): array
     {
-        $roleEnum = config('permissions.role_enum');
+        $roleEnum = Config::string('permissions.role_enum');
 
         if ( ! class_exists($roleEnum)) {
             throw new RuntimeException(

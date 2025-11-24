@@ -19,7 +19,7 @@ afterEach(function (): void {
 });
 
 it('should install the package', function (): void {
-    // Set user model path
+    // Set the user model path
     $userModelPath = workbench_path('app/Models/User.php');
     $this->app['config']->set('permissions.user_model', User::class);
 
@@ -29,6 +29,7 @@ it('should install the package', function (): void {
     File::shouldReceive('copy');
     File::shouldReceive('isDirectory')->andReturn(false);
     File::shouldReceive('makeDirectory');
+    File::shouldReceive('ensureDirectoryExists');
     File::shouldReceive('allFiles')->andReturn([]);
 
     $this->artisan('install:permissions')->assertExitCode(0);
@@ -41,8 +42,7 @@ it('publishes config file', function (): void {
     File::deleteDirectory($targetStubsPath);
     File::delete($targetConfigPath);
 
-    $this->artisan('install:permissions')
-        ->assertExitCode(0);
+    $this->artisan('install:permissions')->assertExitCode(0);
 
     expect($targetConfigPath)->toBeFile();
 });
@@ -55,7 +55,10 @@ it('force overwrites config file', function (): void {
     expect($targetConfigPath)->toBeFile();
 
     $this->artisan('install:permissions')
-        ->expectsQuestion('The config file already exists. Do you want to overwrite it?', 'yes')
+        ->expectsQuestion(
+            'The config file already exists. Do you want to overwrite it?',
+            'yes',
+        )
         ->assertExitCode(0);
 
     expect($targetConfigPath)->toBeFile();
@@ -68,8 +71,7 @@ it('publishes Role enum', function (): void {
     File::delete($targetConfigPath);
     File::deleteDirectory($targetStubsPath);
 
-    $this->artisan('install:permissions')
-        ->assertExitCode(0);
+    $this->artisan('install:permissions')->assertExitCode(0);
 
     expect("{$targetStubsPath}/Role.php")->toBeFile();
 });
@@ -81,7 +83,14 @@ it('force publishes Role enum', function (): void {
     File::delete($targetConfigPath);
 
     $this->artisan('install:permissions')
-        ->expectsQuestion('The Role.php file already exists. Do you want to overwrite it?', 'yes')
+        ->expectsQuestion(
+            'The Role.php file already exists. Do you want to overwrite it?',
+            'yes',
+        )
+        ->expectsQuestion(
+            'The ModelActions.php file already exists. Do you want to overwrite it?',
+            'yes',
+        )
         ->assertExitCode(0);
 
     expect("{$targetStubsPath}/Role.php")->toBeFile();
@@ -99,8 +108,7 @@ it('publishes migrations', function (): void {
     // sleep for 1 second to ensure that the file timestamps are different
     sleep(1);
 
-    $this->artisan('install:permissions')
-        ->assertExitCode(0);
+    $this->artisan('install:permissions')->assertExitCode(0);
 
     $newFiles = File::allFiles($migrationsPath);
 

@@ -10,7 +10,7 @@ return [
     |--------------------------------------------------------------------------
     |
     | These values control how the package discovers models in the application
-    | in order to generate permissions dynamically.
+    | to generate permissions dynamically.
     |
      */
 
@@ -32,7 +32,12 @@ return [
     |
      */
 
+    /** @phpstan-ignore class.notFound */
     'user_model' => App\Models\User::class,
 
+    /** @phpstan-ignore class.notFound */
     'role_enum' => App\Enums\Role::class,
+
+    /** @phpstan-ignore class.notFound */
+    'model_actions_enum' => App\Enums\ModelActions::class,
 ];

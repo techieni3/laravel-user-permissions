@@ -71,7 +71,7 @@ trait HasRoles
         $roles = is_array($roles) ? $roles : [$roles];
 
         // Convert to role values
-        $roleValues = array_map(function (BackedEnum|string $role): int|string {
+        $roleValues = array_map(static function (BackedEnum|string $role): int|string {
             if ($role instanceof BackedEnum) {
                 return $role->value;
             }
@@ -86,7 +86,7 @@ trait HasRoles
 
     /**
      * Scope the model query to exclude models with specific role(s).
-     * Supports single or multiple roles, and accepts both string and BackedEnum values.
+     * Supports single or multiple roles and accepts both string and BackedEnum values.
      *
      * @param  Builder<Model>  $query
      * @param  string|array<string|BackedEnum>|BackedEnum  $roles  Single role or array of roles
@@ -97,7 +97,7 @@ trait HasRoles
         $roles = is_array($roles) ? $roles : [$roles];
 
         // Convert to role values
-        $roleValues = array_map(function (BackedEnum|string $role): int|string {
+        $roleValues = array_map(static function (BackedEnum|string $role): int|string {
             if ($role instanceof BackedEnum) {
                 return $role->value;
             }
@@ -121,7 +121,7 @@ trait HasRoles
      */
     public function addRole(string|BackedEnum $role): static
     {
-        // Convert string role to BackedEnum if necessary
+        // Convert the string role to BackedEnum if necessary
         $roleEnum = $this->convertToRoleEnum($role);
 
         // Verify role exists in the database
@@ -157,7 +157,7 @@ trait HasRoles
      */
     public function removeRole(string|BackedEnum $role): static
     {
-        // Convert string role to BackedEnum if necessary
+        // Convert the string role to BackedEnum if necessary
         $roleEnum = $this->convertToRoleEnum($role);
 
         // Verify role exists in the database
@@ -188,10 +188,7 @@ trait HasRoles
     {
         DB::transaction(function () use ($roles): void {
             // Convert all roles to enums
-            $roleEnums = array_map(
-                fn (BackedEnum|string $role) => $this->convertToRoleEnum($role),
-                $roles
-            );
+            $roleEnums = array_map($this->convertToRoleEnum(...), $roles);
 
             // Verify all roles in a single query
             $dbRoles = $this->verifyRoleInDatabase($roleEnums);
@@ -247,11 +244,11 @@ trait HasRoles
     }
 
     /**
-     * Check if the user has all of the given roles.
+     * Check if the user has all the given roles.
      * Returns true only if the user has every specified role.
      *
      * @param  array<string|BackedEnum>  $roles  Array of roles to check
-     * @return bool True if user has all roles, false otherwise
+     * @return bool True if a user has all roles, false otherwise
      */
     public function hasAllRoles(array $roles): bool
     {
@@ -344,7 +341,6 @@ trait HasRoles
     /**
      * Verify that role(s) exist in the database.
      * Handles both single role and bulk role verification.
-     * Uses optimized whereIn query for bulk operations.
      *
      * @param  BackedEnum|array<BackedEnum>  $roleEnum  Single role or array of roles
      * @return Role|Collection<int, Role> Single Role model or Collection of Roles

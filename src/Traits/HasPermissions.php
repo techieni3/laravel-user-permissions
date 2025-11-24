@@ -52,8 +52,7 @@ trait HasPermissions
             table: 'users_permissions',
             foreignPivotKey: 'user_id',
             relatedPivotKey: 'permission_id'
-        )
-            ->withTimestamps();
+        )->withTimestamps();
     }
 
     /**
@@ -66,13 +65,28 @@ trait HasPermissions
     public function allPermissions(): Collection
     {
         $direct = DB::table('users_permissions')
-            ->join('permissions', 'permissions.id', '=', 'users_permissions.permission_id')
+            ->join(
+                table: 'permissions',
+                first: 'permissions.id',
+                operator: '=',
+                second: 'users_permissions.permission_id'
+            )
             ->where('users_permissions.user_id', $this->id)
             ->select('permissions.*');
 
         $role = DB::table('users_roles')
-            ->join('roles_permissions', 'roles_permissions.role_id', '=', 'users_roles.role_id')
-            ->join('permissions', 'permissions.id', '=', 'roles_permissions.permission_id')
+            ->join(
+                table: 'roles_permissions',
+                first: 'roles_permissions.role_id',
+                operator: '=',
+                second: 'users_roles.role_id'
+            )
+            ->join(
+                table: 'permissions',
+                first: 'permissions.id',
+                operator: '=',
+                second: 'roles_permissions.permission_id'
+            )
             ->where('users_roles.user_id', $this->id)
             ->select('permissions.*');
 
@@ -94,7 +108,7 @@ trait HasPermissions
         $permissions = is_array($permissions) ? $permissions : [$permissions];
 
         // Normalize permission names
-        $permissionNames = array_map(fn (string $p) => $this->makePermissionName($p), $permissions);
+        $permissionNames = array_map($this->makePermissionName(...), $permissions);
 
         return $query->where(function (Builder $q) use ($permissionNames): void {
             // Check direct permissions
@@ -122,11 +136,12 @@ trait HasPermissions
         $permissions = is_array($permissions) ? $permissions : [$permissions];
 
         // Normalize permission names
-        $permissionNames = array_map(fn (string $p) => $this->makePermissionName($p), $permissions);
+        $permissionNames = array_map($this->makePermissionName(...), $permissions);
 
-        return $query->whereDoesntHave('directPermissions', function (Builder $query) use ($permissionNames): void {
-            $query->whereIn('name', $permissionNames);
-        })
+        return $query
+            ->whereDoesntHave('directPermissions', function (Builder $query) use ($permissionNames): void {
+                $query->whereIn('name', $permissionNames);
+            })
             ->whereDoesntHave('roles.permissions', function (Builder $query) use ($permissionNames): void {
                 $query->whereIn('permissions.name', $permissionNames);
             });
@@ -204,10 +219,7 @@ trait HasPermissions
     public function syncPermissions(array $permissions): static
     {
         // Normalize all permission names
-        $searchablePermissions = array_map(
-            fn (string $permission) => $this->makePermissionName($permission),
-            $permissions
-        );
+        $searchablePermissions = array_map($this->makePermissionName(...), $permissions);
 
         // Verify all permissions in a single query
         $dbPermissions = $this->verifyPermissionInDatabase($searchablePermissions);
@@ -271,7 +283,7 @@ trait HasPermissions
     }
 
     /**
-     * Check if the user has all of the given permissions.
+     * Check if the user has all the given permissions.
      *
      * @param  array<string>  $permissions
      */
@@ -301,7 +313,7 @@ trait HasPermissions
     }
 
     /**
-     * Get cached permissions or load them from database.
+     * Get cached permissions or load them from a database.
      * This ensures permissions are only queried once per request for optimal performance.
      *
      * @return Collection<int, Permission>
@@ -324,15 +336,15 @@ trait HasPermissions
      */
     protected function makePermissionName(string $permissionString): string
     {
-        $normalized = mb_strtolower(str_replace([' ', '-'], '_', $permissionString));
+        $normalized = mb_strtolower(str_replace([' ', '-', '_'], '.', $permissionString));
 
         if (in_array(mb_trim($normalized), ['', '0'], true)) {
             throw new InvalidArgumentException('Permission name cannot be empty.');
         }
 
-        if ( ! preg_match('/^[a-z0-9_]+$/', $normalized)) {
+        if ( ! preg_match('/^[a-z0-9_.]+$/', $normalized)) {
             throw new InvalidArgumentException(
-                "Permission name '{$normalized}' contains invalid characters. Only lowercase letters, numbers, and underscores are allowed."
+                "Permission name '{$normalized}' contains invalid characters. Only lowercase letters, numbers, underscores, and dots are allowed."
             );
         }
 
@@ -342,14 +354,18 @@ trait HasPermissions
     /**
      * Get permission IDs that the user has through their roles.
      * This is used internally by syncPermissions() to prevent duplicate direct permissions.
-     * Uses optimized join query for performance.
      *
      * @return array<int, mixed> Array of permission IDs
      */
-    protected function getPermissionIdsViaRoles(): array
+    private function getPermissionIdsViaRoles(): array
     {
         return DB::table('users_roles')
-            ->join('roles_permissions', 'roles_permissions.role_id', '=', 'users_roles.role_id')
+            ->join(
+                table: 'roles_permissions',
+                first: 'roles_permissions.role_id',
+                operator: '=',
+                second: 'users_roles.role_id'
+            )
             ->where('users_roles.user_id', $this->id)
             ->pluck('roles_permissions.permission_id')
             ->all();
@@ -358,7 +374,6 @@ trait HasPermissions
     /**
      * Verify that permission(s) exist in the database.
      * Handles both single permission and bulk permission verification.
-     * Uses optimized whereIn query for bulk operations.
      *
      * @param  string|array<string>  $searchablePermission  Single permission name or array of permission names
      * @return Permission|Collection<int, Permission> Single Permission model or Collection of Permissions
@@ -369,7 +384,9 @@ trait HasPermissions
     {
         // Handle single permission
         if (is_string($searchablePermission)) {
-            $permission = Permission::query()->where('name', '=', $searchablePermission)->first();
+            $permission = Permission::query()
+                ->where('name', '=', $searchablePermission)
+                ->first();
 
             if ( ! $permission) {
                 throw new RuntimeException(
@@ -381,7 +398,9 @@ trait HasPermissions
         }
 
         // Handle multiple permissions (bulk)
-        $permissions = Permission::query()->whereIn('name', $searchablePermission)->get();
+        $permissions = Permission::query()
+            ->whereIn('name', $searchablePermission)
+            ->get();
 
         // Verify all permissions were found
         $foundNames = $permissions->pluck('name')->all();
@@ -389,9 +408,7 @@ trait HasPermissions
 
         if ($missingPermissions !== []) {
             $missingList = implode(', ', $missingPermissions);
-            throw new RuntimeException(
-                "Permissions [{$missingList}] are not synced with the database. Please run \"php artisan sync:permissions\" first."
-            );
+            throw new RuntimeException("Permissions [{$missingList}] are not synced with the database. Please run \"php artisan sync:permissions\" first.");
         }
 
         return $permissions;

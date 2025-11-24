@@ -15,7 +15,7 @@ it('can check if a user has a role', function (): void {
     ]);
 
     // Create a user
-    $user = User::create([
+    $user = User::query()->create([
         'name' => 'John Doe',
     ]);
 

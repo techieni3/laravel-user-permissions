@@ -2,13 +2,26 @@
 
 declare(strict_types=1);
 
-namespace Techieni3\LaravelUserPermissions\Enums;
+namespace App\Enums;
 
 /**
  * Model Actions Enum.
  *
  * Defines the standard CRUD and policy actions that can be performed on models.
  * These actions are used to generate permissions for models.
+ *
+ * Usage:
+ * - Add new actions by adding new enum cases
+ * - Action values should be lowercase with underscores
+ * - After modifying actions, run: php artisan sync:permissions
+ *
+ * Example:
+ * ```php
+ * // Generated permissions will be like:
+ * // user.create, user.view, user.update, etc.
+ * ```
+ *
+ * @package App\Enums
  */
 enum ModelActions: string
 {
@@ -33,13 +46,9 @@ enum ModelActions: string
     /** Permanently delete a record */
     case ForceDelete = 'force_delete';
 
-    /**
-     * Get a list of all action values.
-     *
-     * @return array<string> Array of action values
-     */
-    public static function list(): array
-    {
-        return array_column(self::cases(), 'value');
-    }
+    // Add more actions here as needed:
+    // case Export = 'export';
+    // case Import = 'import';
+    // case Approve = 'approve';
+    // case Publish = 'publish';
 }

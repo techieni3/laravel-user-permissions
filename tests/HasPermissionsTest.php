@@ -10,21 +10,21 @@ it('can check if a user has a permission', function (): void {
         ->assertExitCode(0);
 
     $this->assertDatabaseHas('permissions', [
-        'name' => 'create_admin',
+        'name' => 'admin.create',
     ]);
 
     // Create a user
-    $user = User::create([
+    $user = User::query()->create([
         'name' => 'John Doe',
     ]);
 
     $this->assertDatabaseCount('users', 1);
 
-    $user->addPermission('create_admin');
+    $user->addPermission('admin.create');
 
     $this->assertDatabaseCount('users_permissions', 1);
 
     $user->refresh();
 
-    expect($user->hasPermission('create_admin'))->toBeTrue();
+    expect($user->hasPermission('admin.create'))->toBeTrue();
 });

@@ -6,18 +6,13 @@ namespace Techieni3\LaravelUserPermissions\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Contracts\Filesystem\FileNotFoundException;
+use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\File;
 use ReflectionClass;
 use Throwable;
 
 /**
  * Install Permissions Command.
- *
- * This command installs the permissions package by:
- * - Publishing the configuration file
- * - Publishing migrations
- * - Creating the Role enum stub
- * - Adding the HasRoles trait to the User model
  */
 class InstallPermissions extends Command
 {
@@ -38,7 +33,7 @@ class InstallPermissions extends Command
     /**
      * The path to the user model file.
      */
-    private ?string $userModelPath = null;
+    private string $userModelPath;
 
     /**
      * Execute the console command.
@@ -48,15 +43,16 @@ class InstallPermissions extends Command
      */
     public function handle(): void
     {
-        $this->userModelPath = $this->getClassFilePath(config('permissions.user_model'));
+        $this->userModelPath = $this->getClassFilePath(Config::string('permissions.user_model'));
 
-        $this->checkUserModelExists();
         $this->publishConfig();
         $this->publishMigrations();
+        $this->createEnumsFolder();
         $this->copyRoleStub();
+        $this->copyModelActionsStub();
         $this->addHasRolesTraitToUserModel();
 
-        $this->info('Permissions package installed successfully!');
+        $this->info('✨ Permissions package installed successfully!');
     }
 
     /**
@@ -64,7 +60,7 @@ class InstallPermissions extends Command
      */
     private function publishConfig(): void
     {
-        $configPath = __DIR__ . '/../../config/permissions.php';
+        $configPath = __DIR__.'/../../config/permissions.php';
 
         $destinationPath = config_path('permissions.php');
 
@@ -73,7 +69,8 @@ class InstallPermissions extends Command
         }
 
         File::copy($configPath, $destinationPath);
-        $this->info('Config file published successfully.');
+
+        $this->info('✅ Config file published successfully.');
     }
 
     /**
@@ -81,26 +78,28 @@ class InstallPermissions extends Command
      */
     private function publishMigrations(): void
     {
-        $migrationPath = __DIR__ . '/../../migrations';
+        $migrationPath = __DIR__.'/../../migrations';
 
         $destinationPath = database_path('migrations');
 
-        if ( ! File::isDirectory($destinationPath)) {
-            File::makeDirectory($destinationPath, 0755, true);
-        }
+        File::ensureDirectoryExists($destinationPath);
 
         $files = File::allFiles($migrationPath);
 
         $timestamp = date('Y_m_d_His');
         $counter = 0;
+
         foreach ($files as $file) {
             $fileName = $file->getFilename();
-            $newFileName = $timestamp . '_' . mb_str_pad((string) $counter, 2, '0', STR_PAD_LEFT) . '_' . $fileName;
-            File::copy($file->getPathname(), $destinationPath . '/' . $newFileName);
+
+            $newFileName = $timestamp.'_'.mb_str_pad((string) $counter, 2, '0', STR_PAD_LEFT).'_'.$fileName;
+
+            File::copy($file->getPathname(), $destinationPath.'/'.$newFileName);
+
             $counter++;
         }
 
-        $this->info('Migrations published successfully.');
+        $this->info('✅ Migrations published successfully.');
     }
 
     /**
@@ -110,9 +109,7 @@ class InstallPermissions extends Command
     {
         $enumsPath = app_path('Enums');
 
-        if ( ! File::isDirectory($enumsPath)) {
-            File::makeDirectory($enumsPath, 0755, true);
-        }
+        File::ensureDirectoryExists($enumsPath);
     }
 
     /**
@@ -120,9 +117,7 @@ class InstallPermissions extends Command
      */
     private function copyRoleStub(): void
     {
-        $this->createEnumsFolder();
-
-        $stubPath = __DIR__ . '/../../stubs/Role.php.stub';
+        $stubPath = __DIR__.'/../../stubs/Role.php.stub';
 
         $destinationPath = app_path('Enums/Role.php');
 
@@ -131,23 +126,26 @@ class InstallPermissions extends Command
         }
 
         File::copy($stubPath, $destinationPath);
-        $this->info('Role stub copied successfully.');
+
+        $this->info('✅ Role stub copied successfully.');
     }
 
     /**
-     * Check if the User model file exists.
-     *
-     * @throws Throwable When the user model file is not found
+     * Copy the ModelActions enum stub to the application's Enums directory.
      */
-    private function checkUserModelExists(): void
+    private function copyModelActionsStub(): void
     {
-        if ($this->userModelPath === null) {
-            $this->fail('User model file not found. Please update the config file.');
+        $stubPath = __DIR__.'/../../stubs/ModelActions.php.stub';
+
+        $destinationPath = app_path('Enums/ModelActions.php');
+
+        if (File::exists($destinationPath) && ! $this->confirm('The ModelActions.php file already exists. Do you want to overwrite it?')) {
+            return;
         }
 
-        if ( ! file_exists($this->userModelPath)) {
-            $this->fail('User model file not found. Please update the config file.');
-        }
+        File::copy($stubPath, $destinationPath);
+
+        $this->info('✅ ModelActions stub copied successfully.');
     }
 
     /**
@@ -169,7 +167,7 @@ class InstallPermissions extends Command
         // check user model extend classes
         if (str_contains($userModel, 'User extends Authenticatable implements MustVerifyEmail')) {
             $this->addHasRolesTraitForMustVerifyEmailImplementedUserModel();
-            $this->info('Added HasRoles trait to User model.');
+            $this->info('✅ Added HasRoles trait to User model.');
 
             return;
         }
@@ -177,7 +175,7 @@ class InstallPermissions extends Command
         // Check if the file contains only 'User extends Authenticatable' (and not 'implements MustVerifyEmail')
         if (str_contains($userModel, 'User extends Authenticatable')) {
             $this->addHasRolesTraitForAuthenticatableExtendedUserModel();
-            $this->info('Added HasRoles trait to User model.');
+            $this->info('✅ Added HasRoles trait to User model.');
 
             return;
         }
@@ -196,16 +194,15 @@ class InstallPermissions extends Command
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Techieni3\LaravelUserPermissions\Traits\HasRoles;
 EOT,
-            file: config('permissions.user_model')
+            filePath: $this->userModelPath,
         );
     }
 
     /**
-     * Add HasRoles trait to User model that implements MustVerifyEmail.
+     * Add HasRoles trait to a User model that implements MustVerifyEmail.
      */
     private function addHasRolesTraitForMustVerifyEmailImplementedUserModel(): void
     {
-
         $this->addHasRolesTraitsNamespaceInUserModel();
 
         $this->replaceInFile(
@@ -218,12 +215,12 @@ class User extends Authenticatable implements MustVerifyEmail
 {
     use HasRoles;
 EOT,
-            file: config('permissions.user_model')
+            filePath: $this->userModelPath,
         );
     }
 
     /**
-     * Add HasRoles trait to User model that extends Authenticatable.
+     * Add HasRoles trait to a User model that extends Authenticatable.
      */
     private function addHasRolesTraitForAuthenticatableExtendedUserModel(): void
     {
@@ -239,43 +236,43 @@ class User extends Authenticatable
 {
     use HasRoles;
 EOT,
-            file: config('permissions.user_model')
+            filePath: $this->userModelPath,
         );
     }
 
     /**
      * Replace content in a file.
      *
-     * @param  string|array<string>  $search  The content to search for
-     * @param  string|array<string>  $replace  The replacement content
-     * @param  string  $file  The file path
+     * @param  string|array<string>  $search
+     * @param  string|array<string>  $replace
      */
-    private function replaceInFile(string|array $search, string|array $replace, string $file): void
+    private function replaceInFile(string|array $search, string|array $replace, string $filePath): void
     {
         file_put_contents(
-            $file,
-            str_replace($search, $replace, (string) file_get_contents($file))
+            $filePath,
+            str_replace($search, $replace, (string) file_get_contents($filePath))
         );
     }
 
     /**
      * Get the file path from a class reference.
      *
-     * @param  string  $className  Fully qualified class name
-     * @return string|null File path or null if class doesn't exist
+     * @throws FileNotFoundException
      */
-    private function getClassFilePath(string $className): ?string
+    private function getClassFilePath(string $className): string
     {
         if ( ! class_exists($className)) {
-            return null;
+            throw new FileNotFoundException("Class {$className} not found.");
         }
 
-        try {
-            $reflection = new ReflectionClass($className);
+        $reflection = new ReflectionClass($className);
 
-            return $reflection->getFileName() ?: null;
-        } catch (Throwable) {
-            return null;
+        $path = $reflection->getFileName();
+
+        if ( ! $path) {
+            throw new FileNotFoundException("Class {$className} not found.");
         }
+
+        return $path;
     }
 }

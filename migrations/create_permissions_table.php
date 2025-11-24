@@ -22,6 +22,7 @@ return new class extends Migration
             $table->foreignId('permission_id');
             $table->timestamps();
 
+            // Indexes
             $table->index('role_id');
             $table->index('permission_id');
             $table->unique(['role_id', 'permission_id']);
@@ -32,6 +33,7 @@ return new class extends Migration
             $table->foreignId('permission_id');
             $table->timestamps();
 
+            // Indexes
             $table->index('user_id');
             $table->index('permission_id');
             $table->unique(['user_id', 'permission_id']);

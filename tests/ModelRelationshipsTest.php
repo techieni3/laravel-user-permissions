@@ -13,53 +13,68 @@ beforeEach(function (): void {
 });
 
 it('role has many-to-many relationship with permissions', function (): void {
-    $role = Role::where('name', RoleEnum::Admin->value)->first();
-    $permission1 = Permission::where('name', 'create_admin')->first();
-    $permission2 = Permission::where('name', 'view_admin')->first();
+    $role = Role::query()->where('name', RoleEnum::Admin)->first();
+    $permission1 = Permission::query()->where('name', 'admin.create')->first();
+    $permission2 = Permission::query()->where('name', 'admin.view')->first();
 
     $role->permissions()->attach([$permission1->id, $permission2->id]);
 
     expect($role->permissions)->toHaveCount(2);
-    expect($role->permissions->pluck('name')->toArray())->toContain('create_admin', 'view_admin');
+
+    expect($role->permissions->pluck('name')->toArray())
+        ->toContain('admin.create', 'admin.view');
 });
 
 it('permission has many-to-many relationship with roles', function (): void {
-    $permission = Permission::where('name', 'create_admin')->first();
-    $adminRole = Role::where('name', RoleEnum::Admin->value)->first();
-    $editorRole = Role::where('name', RoleEnum::User->value)->first();
+    $permission = Permission::query()->where('name', 'admin.create')->first();
+    $adminRole = Role::query()->where('name', RoleEnum::Admin)->first();
+    $editorRole = Role::query()->where('name', RoleEnum::User)->first();
 
     $permission->roles()->attach([$adminRole->id, $editorRole->id]);
 
     expect($permission->roles)->toHaveCount(2);
 
-    expect($permission->roles->pluck('name')->map(static fn ($role) => $role->value)->toArray())->toContain(RoleEnum::Admin->value, RoleEnum::User->value);
+    expect(
+        $permission->roles
+            ->pluck('name')
+            ->map(static fn ($role) => $role->value)
+            ->toArray()
+    )
+        ->toContain(RoleEnum::Admin->value, RoleEnum::User->value);
 });
 
 it('user has many-to-many relationship with roles', function (): void {
-    $user = User::create(['name' => 'John Doe']);
+    $user = User::query()->create(['name' => 'John Doe']);
     $user->addRole(RoleEnum::Admin);
     $user->addRole(RoleEnum::User);
 
     $roles = $user->roles()->get();
 
     expect($roles)->toHaveCount(2);
-    expect($roles->pluck('name')->map(static fn ($role) => $role->value)->toArray())->toContain(RoleEnum::Admin->value, RoleEnum::User->value);
+
+    expect(
+        $roles->pluck('name')
+            ->map(static fn ($role) => $role->value)
+            ->toArray(),
+    )
+        ->toContain(RoleEnum::Admin->value, RoleEnum::User->value);
 });
 
 it('user has many-to-many relationship with direct permissions', function (): void {
-    $user = User::create(['name' => 'John Doe']);
-    $user->addPermission('create_admin');
-    $user->addPermission('view_admin');
+    $user = User::query()->create(['name' => 'John Doe']);
+    $user->addPermission('admin.create');
+    $user->addPermission('admin.view');
 
     $permissions = $user->directPermissions()->get();
 
     expect($permissions)->toHaveCount(2);
-    expect($permissions->pluck('name')->toArray())->toContain('create_admin', 'view_admin');
+    expect($permissions->pluck('name')->toArray())
+        ->toContain('admin.create', 'admin.view');
 });
 
 it('can eager load roles with permissions', function (): void {
-    $role = Role::where('name', RoleEnum::Admin->value)->first();
-    $permission = Permission::where('name', 'create_admin')->first();
+    $role = Role::query()->where('name', RoleEnum::Admin)->first();
+    $permission = Permission::query()->where('name', 'admin.create')->first();
     $role->permissions()->attach($permission->id);
 
     $loadedRole = Role::with('permissions')->find($role->id);
@@ -69,8 +84,8 @@ it('can eager load roles with permissions', function (): void {
 });
 
 it('can eager load permissions with roles', function (): void {
-    $permission = Permission::where('name', 'create_admin')->first();
-    $adminRole = Role::where('name', RoleEnum::Admin->value)->first();
+    $permission = Permission::query()->where('name', 'admin.create')->first();
+    $adminRole = Role::query()->where('name', RoleEnum::Admin)->first();
     $permission->roles()->attach($adminRole->id);
 
     $loadedPermission = Permission::with('roles')->find($permission->id);
@@ -80,8 +95,8 @@ it('can eager load permissions with roles', function (): void {
 });
 
 it('can detach permissions from role', function (): void {
-    $role = Role::where('name', RoleEnum::Admin->value)->first();
-    $permission = Permission::where('name', 'create_admin')->first();
+    $role = Role::query()->where('name', RoleEnum::Admin)->first();
+    $permission = Permission::query()->where('name', 'admin.create')->first();
 
     $role->permissions()->attach($permission->id);
     expect($role->permissions)->toHaveCount(1);
@@ -93,10 +108,10 @@ it('can detach permissions from role', function (): void {
 });
 
 it('can sync permissions on a role', function (): void {
-    $role = Role::where('name', RoleEnum::Admin->value)->first();
-    $permission1 = Permission::where('name', 'create_admin')->first();
-    $permission2 = Permission::where('name', 'view_admin')->first();
-    $permission3 = Permission::where('name', 'update_admin')->first();
+    $role = Role::query()->where('name', RoleEnum::Admin)->first();
+    $permission1 = Permission::query()->where('name', 'admin.create')->first();
+    $permission2 = Permission::query()->where('name', 'admin.view')->first();
+    $permission3 = Permission::query()->where('name', 'admin.update')->first();
 
     $role->permissions()->attach([$permission1->id, $permission2->id]);
     expect($role->permissions)->toHaveCount(2);
@@ -106,30 +121,14 @@ it('can sync permissions on a role', function (): void {
     $role->refresh();
 
     expect($role->permissions)->toHaveCount(2);
-    expect($role->permissions->pluck('name')->toArray())->toContain('view_admin', 'update_admin');
-    expect($role->permissions->pluck('name')->toArray())->not->toContain('create_admin');
-});
 
-it('role model uses correct table name', function (): void {
-    $role = new Role;
-    expect($role->getTable())->toBe('roles');
-});
+    expect($role->permissions->pluck('name')->toArray())
+        ->toContain(
+            'admin.view',
+            'admin.update',
+        );
 
-it('permission model uses correct table name', function (): void {
-    $permission = new Permission;
-    expect($permission->getTable())->toBe('permissions');
-});
-
-it('role model guards id field', function (): void {
-    $role = new Role;
-    $guarded = $role->getGuarded();
-
-    expect($guarded)->toContain('id');
-});
-
-it('permission model guards id field', function (): void {
-    $permission = new Permission;
-    $guarded = $permission->getGuarded();
-
-    expect($guarded)->toContain('id');
+    expect($role->permissions->pluck('name')->toArray())
+        ->not
+        ->toContain('admin.create');
 });

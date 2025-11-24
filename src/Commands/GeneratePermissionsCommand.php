@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 namespace Techieni3\LaravelUserPermissions\Commands;
 
+use BackedEnum;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\File;
-use Techieni3\LaravelUserPermissions\Enums\ModelActions;
 use Techieni3\LaravelUserPermissions\Models\Permission;
+use Throwable;
 
 /**
  * Generate Permissions Command.
@@ -36,63 +37,76 @@ class GeneratePermissionsCommand extends Command
     /**
      * Execute the console command.
      * Scans the models directory and generates permissions for each model.
+     *
+     * @throws Throwable
      */
     public function handle(): void
     {
         $modelsPath = Config::string('permissions.models_path');
 
-        if ( ! $modelsPath || ! File::isDirectory($modelsPath)) {
-            $this->error('Models directory not found. Please check your permissions.models_path config.');
+        if ($modelsPath === '' || ! File::isDirectory($modelsPath)) {
+            $this->fail('Models directory not found. Please check your permissions.models_path config.');
+        }
 
-            return;
+        /** @var class-string<BackedEnum> $modelActionsEnum */
+        $modelActionsEnum = Config::string('permissions.model_actions_enum');
+
+        if ( ! class_exists($modelActionsEnum) || ! enum_exists($modelActionsEnum)) {
+            $this->fail("ModelActions enum class not found. Please make sure it's defined correctly.");
+        }
+
+        /** @var array<string> $actions */
+        $actions = array_column($modelActionsEnum::cases(), 'value');
+
+        if ($actions === []) {
+            $this->fail("No actions found in the {$modelActionsEnum} enum.");
         }
 
         $modelFiles = File::allFiles($modelsPath);
 
+        /** @var array<string> $excludedModels */
         $excludedModels = Config::array('permissions.excluded_models', []);
-        $excludedModelsBaseNames = array_map(static function ($model): string {
-            $classParts = explode('\\', $model);
-
-            return end($classParts);
-        }, array_values($excludedModels));
+        $excludedModelsBaseNames = array_map(class_basename(...), array_values($excludedModels));
 
         $permissions = [];
 
         foreach ($modelFiles as $modelFile) {
             $modelName = $modelFile->getBasename('.php');
 
-            // check model name is not excluded
+            // check the model name is not excluded
             if (in_array($modelName, $excludedModelsBaseNames, true)) {
                 continue;
             }
 
-            $permissions = [...$permissions, ...$this->getPermissionsForModel($modelName)];
+            $permissions[] = $this->getPermissionsForModel($modelName, $actions);
         }
+
+        $permissions = array_merge(...$permissions);
+        $count = 0;
 
         if ($permissions !== []) {
-            Permission::query()->upsert($permissions, ['name']);
+            $count = Permission::query()->upsert($permissions, ['name']);
         }
 
-        $this->info('Permissions generated successfully.');
+        $this->info("{$count} permissions synchronized.");
     }
 
     /**
      * Get a permissions array for a specific model.
-     * Returns permission data for each action defined in the ModelActions enum.
      *
-     * @param  string  $modelName  The name of the model to generate permissions for
+     * @param  array<string>  $actions
      * @return array<int, array{name: string, display_name: string}>
      */
-    protected function getPermissionsForModel(string $modelName): array
+    protected function getPermissionsForModel(string $modelName, array $actions): array
     {
         $permissions = [];
 
-        foreach (ModelActions::list() as $action) {
-            $permissionName = mb_strtolower("{$action}_{$modelName}");
+        foreach ($actions as $action) {
+            $permissionName = mb_strtolower("{$modelName}.{$action}");
 
             $permissions[] = [
                 'name' => $permissionName,
-                'display_name' => ucwords(str_replace('_', ' ', $permissionName)),
+                'display_name' => ucwords("{$modelName} {$action}"),
             ];
         }
 
