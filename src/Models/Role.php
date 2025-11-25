@@ -6,6 +6,7 @@ namespace Techieni3\LaravelUserPermissions\Models;
 
 use BackedEnum;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Facades\Config;
@@ -22,6 +23,7 @@ use RuntimeException;
  * @property string $display_name The human-readable display name
  * @property Carbon $created_at Timestamp when the role was created
  * @property Carbon $updated_at Timestamp when the role was last updated
+ * @property-read Collection<int, Permission> $permissions Roles permissions via relationship
  */
 class Role extends Model
 {

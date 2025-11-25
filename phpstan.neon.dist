@@ -12,3 +12,7 @@ parameters:
     treatPhpDocTypesAsCertain: false
 
     tmpDir: /tmp/phpstan
+
+    ignoreErrors:
+        # Traits are used by external user models, not directly in this package
+        - identifier: trait.unused

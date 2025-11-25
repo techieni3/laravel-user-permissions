@@ -22,15 +22,15 @@ class UserAccessController
      */
     public function show(int $userId): JsonResponse
     {
-        /** @var Model $userModel */
+        /** @var class-string<Model> $userModel */
         $userModel = Config::string('permissions.user_model');
         $displayColumn = Config::get('permissions.user_name_column', 'name');
 
         $user = $userModel::query()->findOrFail($userId);
 
         $allRoles = Role::query()
-            ->select(['id', 'display_name'])
             ->with('permissions:id')
+            ->select(['id', 'display_name'])
             ->get()
             ->map(
                 static fn (Role $role): array => [
@@ -76,7 +76,7 @@ class UserAccessController
     public function update(Request $request, int $userId): JsonResponse
     {
         try {
-            /** @var Model $userModel */
+            /** @var class-string<Model> $userModel */
             $userModel = Config::string('permissions.user_model');
             $user = $userModel::query()->findOrFail($userId);
 

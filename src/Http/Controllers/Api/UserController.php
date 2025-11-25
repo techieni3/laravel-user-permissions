@@ -16,18 +16,18 @@ class UserController
      */
     public function index(Request $request): JsonResponse
     {
-        /** @var Model $userModel */
+        /** @var class-string<Model> $userModel */
         $userModel = Config::string('permissions.user_model');
-        $displayColumn = Config::get('permissions.user_name_column', 'name');
+        $displayColumn = Config::string('permissions.user_name_column', 'name');
 
         $query = $userModel::query()
-            ->select(['id', $displayColumn])
             ->with(['roles:id,display_name'])
-            ->withCount(['directPermissions']);
+            ->withCount(['directPermissions'])
+            ->select(['id', $displayColumn]);
 
         // Apply search filter if provided
         if ($request->has('search') && $search = $request->input('search')) {
-            $query->where($displayColumn, 'like', '%'.$search.'%');
+            $query->whereLike($displayColumn, '%'.$search.'%');
         }
 
         $users = $query
