@@ -11,9 +11,9 @@ use Illuminate\Queue\SerializesModels;
 use Techieni3\LaravelUserPermissions\Models\Permission;
 
 /**
- * PermissionAdded Event.
+ * PermissionAdded Event
  *
- * Dispatched when a permission is added to a model (typically a user).
+ * Dispatched when a permission is added to a model.
  */
 class PermissionAdded
 {

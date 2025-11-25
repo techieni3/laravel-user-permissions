@@ -18,13 +18,12 @@ use Techieni3\LaravelUserPermissions\Middlewares\RoleMiddleware;
 use Techieni3\LaravelUserPermissions\Middlewares\RoleOrPermissionMiddleware;
 
 /**
- * Permissions Service Provider.
+ * Permissions Service Provider
  */
 class PermissionsServiceProvider extends ServiceProvider
 {
     /**
-     * Bootstrap any application services.
-     * Registers console commands and sets up the Gate integration.
+     * Bootstrap services and register commands.
      */
     public function boot(): void
     {
@@ -47,8 +46,7 @@ class PermissionsServiceProvider extends ServiceProvider
     }
 
     /**
-     * Register any application services.
-     * Merges the package configuration with the application configuration.
+     * Merge package configuration.
      */
     #[Override]
     public function register(): void
@@ -111,9 +109,8 @@ class PermissionsServiceProvider extends ServiceProvider
 
     /**
      * Register the permission check callback on the Gate.
-     * This integrates permission checking into Laravel's authorization system.
      *
-     * @return Closure The Gate before callback
+     * @return Closure Gate before callback for permission checking
      */
     private function setupGateBeforeCallback(): Closure
     {

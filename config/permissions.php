@@ -5,22 +5,21 @@ declare(strict_types=1);
 return [
     /*
     |--------------------------------------------------------------------------
-    | Dashboard Configuration
+    | Dashboard Settings
     |--------------------------------------------------------------------------
     |
-    | These values control the permissions manager dashboard UI, including
-    | whether it's enabled and the URL path where it will be accessible.
+    | Controls the permissions manager dashboard: whether it’s enabled
+    | and the URL where it can be accessed.
     |
-     */
+    */
 
-    // Enable or disable the permissions manager UI
+    // Enable or disable the permissions manager dashboard
     'dashboard_enabled' => env('PERMISSIONS_MANAGER_DASHBOARD_ENABLED', true),
 
-    // The path where the permissions manager UI will be available
+    // URL path for accessing the dashboard
     'path' => env('PERMISSIONS_MANAGER_DASHBOARD_PATH', 'permissions-manager'),
 
-    // The column to use for displaying username on the permission manager dashboard
-    // (e.g., 'name', 'email', 'username')
+    // Column used to display usernames on the dashboard (e.g., name, email)
     'user_name_column' => 'name',
 
     /*
@@ -28,15 +27,14 @@ return [
     | Model Discovery
     |--------------------------------------------------------------------------
     |
-    | These values control how the package discovers models in the application
-    | to generate permissions dynamically.
+    | Controls how models are discovered when generating permissions.
     |
-     */
+    */
 
-    // Directory containing all your Eloquent models
+    // Directory containing your application’s Eloquent models
     'models_path' => app_path('Models'),
 
-    // Excluded models that should NOT have permissions generated
+    // Models to exclude from permission generation
     'excluded_models' => [
         // App\Models\User::class,
     ],
@@ -46,10 +44,9 @@ return [
     | Core Application Classes
     |--------------------------------------------------------------------------
     |
-    | These references allow the package to know which classes represent the
-    | user entity and the role enumeration.
+    | Classes used by the permissions system (user model, role enum, etc.).
     |
-     */
+    */
 
     /** @phpstan-ignore class.notFound */
     'user_model' => App\Models\User::class,
@@ -62,14 +59,12 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Events Configuration
+    | Events
     |--------------------------------------------------------------------------
     |
-    | Control whether events should be dispatched when roles and permissions
-    | are added or removed.
+    | Enable or disable events fired when roles or permissions change.
     |
-     */
+    */
 
-    // Enable or disable event dispatching for role and permission changes
     'events_enabled' => env('PERMISSIONS_EVENTS_ENABLED', true),
 ];

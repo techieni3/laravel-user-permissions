@@ -13,7 +13,7 @@ use Throwable;
 /**
  * Generate Roles Command.
  *
- * This command generates role records in the database from the configured Role enum.
+ * This command generates role records from the configured Role enum.
  */
 class GenerateRolesCommand extends Command
 {

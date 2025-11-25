@@ -11,23 +11,14 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 
 /**
- * Permission Middleware.
- *
- * This middleware ensures that the authenticated user has at least one of the specified permissions.
- * Multiple permissions can be specified using a pipe (|) separator.
+ * Ensures user has required permission(s). Use pipe (|) for multiple.
  */
 class PermissionMiddleware
 {
     /**
-     * Handle an incoming request.
-     * Verifies the user is authenticated and has the required permission(s).
+     * @param  string  $permission  Pipe-separated permissions
      *
-     * @param  Request  $request  The incoming request
-     * @param  Closure(Request): (Response)  $next  The next middleware
-     * @param  string  $permission  The required permission(s), separated by pipe (|) for multiple
-     * @param  string|null  $guard  The authentication guard to use
-     *
-     * @throws HttpException When unauthorized
+     * @throws HttpException
      */
     public function handle(Request $request, Closure $next, string $permission, ?string $guard = null): Response
     {

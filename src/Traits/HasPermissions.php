@@ -18,24 +18,15 @@ use Techieni3\LaravelUserPermissions\Models\Permission;
 use Throwable;
 
 /**
- * HasPermissions Trait.
+ * HasPermissions Trait
  *
- * Provides permission management functionality for models (typically User).
- * This trait is included by the HasRoles trait but can also be used independently.
- *
- * Features:
- * - Direct permission assignment and removal
- * - Permission verification (hasPermission, hasAnyPermission, hasAllPermissions)
- * - Query scopes for filtering by permissions
- * - Request-level caching to prevent N+1 queries
- * - Integration with role-based permissions
- * - Bulk permission operations with transactions
+ * Provides permission management with caching, bulk operations, and role integration.
+ * Can be used independently or through HasRoles trait.
  */
 trait HasPermissions
 {
     /**
-     * Request-level cache for user permissions.
-     * Prevents multiple database queries for the same user's permissions within a single request.
+     * Request-level permission cache.
      *
      * @var Collection<int, Permission>|null
      */
@@ -59,9 +50,7 @@ trait HasPermissions
     }
 
     /**
-     * Get all permissions for the user, including those granted through roles.
-     * Uses a union query to combine direct permissions and role-based permissions.
-     * Results are deduplicated by permission ID.
+     * Get all permissions for the user, direct and those granted through roles (deduplicated).
      *
      * @return Collection<int, Permission>
      */
@@ -100,7 +89,6 @@ trait HasPermissions
 
     /**
      * Scope the model query to only include models with specific permission(s).
-     * Checks both direct permissions and permissions via roles.
      *
      * @param  Builder<Model>  $query
      * @param  string|array<string>  $permissions
@@ -127,11 +115,9 @@ trait HasPermissions
 
     /**
      * Scope the model query to exclude models with specific permission(s).
-     * Checks both direct permissions and permissions via roles.
-     * Supports single or multiple permissions.
      *
      * @param  Builder<Model>  $query
-     * @param  string|array<string>  $permissions  Single permission or array of permissions
+     * @param  string|array<string>  $permissions
      * @return Builder<Model>
      */
     public function scopeWithoutPermission(Builder $query, string|array $permissions): Builder
@@ -153,11 +139,8 @@ trait HasPermissions
     /**
      * Add a permission to the user.
      * Only adds direct permissions. Prevents adding permissions already granted via roles.
-     * Clears permission cache after assignment.
      *
-     * @param  string  $permission  The permission name to add
-     *
-     * @throws PermissionException If the permission doesn't exist, is already directly assigned, or is granted via role
+     * @throws PermissionException If invalid, already assigned, or granted via role
      */
     public function addPermission(string $permission): static
     {
@@ -188,11 +171,8 @@ trait HasPermissions
     /**
      * Remove a permission from the user.
      * Only removes direct permissions, not permissions granted through roles.
-     * Clears permission cache after removal.
      *
-     * @param  string  $permission  The permission name to remove
-     *
-     * @throws PermissionException If the permission doesn't exist or is not directly assigned
+     * @throws PermissionException If not found or not assigned
      */
     public function removePermission(string $permission): static
     {
@@ -220,12 +200,10 @@ trait HasPermissions
     }
 
     /**
-     * Sync permissions with the user (removes all existing direct permissions and adds new ones).
-     * Performs the operation in a database transaction for atomicity.
-     * Uses bulk operations for optimal performance when syncing multiple permissions.
+     * Sync permissions with the user.
      * Excludes permissions already granted via roles to avoid duplicates.
      *
-     * @param  array<string>  $permissions  Array of permission names to sync
+     * @param  array<string>  $permissions
      *
      * @throws PermissionException|Throwable If any permission is not synced with the database
      */
@@ -262,10 +240,6 @@ trait HasPermissions
 
     /**
      * Check if the user has a specific permission.
-     * Uses request-level cache to avoid multiple DB queries within the same request.
-     *
-     * @param  string  $permission  The permission name to check
-     * @return bool True if the user has the permission, false otherwise
      */
     public function hasPermission(string $permission): bool
     {
@@ -276,9 +250,6 @@ trait HasPermissions
 
     /**
      * Alias for hasPermission.
-     *
-     * @param  string  $permission  The permission name to check
-     * @return bool True if the user has the permission, false otherwise
      */
     public function hasPermissionTo(string $permission): bool
     {
@@ -307,7 +278,6 @@ trait HasPermissions
 
     /**
      * Get cached permissions or load them from a database.
-     * This ensures permissions are only queried once per request for optimal performance.
      *
      * @return Collection<int, Permission>
      */
@@ -321,8 +291,7 @@ trait HasPermissions
     }
 
     /**
-     * Clear the request-level permissions cache.
-     * Should be called after adding/removing/syncing permissions to ensure fresh data.
+     * Clear permission cache.
      */
     private function clearPermissionsCache(): void
     {
@@ -330,11 +299,7 @@ trait HasPermissions
     }
 
     /**
-     * Normalize permission name to lowercase with underscores.
-     * Converts spaces and hyphens to underscores for consistent permission naming.
-     *
-     * @param  string  $permissionString  The permission name to normalize
-     * @return string The normalized permission name
+     * Normalize to lowercase with dots (spaces/hyphens → dots).
      */
     private function normalizePermissionName(string $permissionString): string
     {
@@ -355,9 +320,8 @@ trait HasPermissions
 
     /**
      * Get permission IDs that the user has through their roles.
-     * This is used internally by syncPermissions() to prevent duplicate direct permissions.
      *
-     * @return array<int, mixed> Array of permission IDs
+     * @return array<int, mixed>
      */
     private function getRolePermissionIds(): array
     {
@@ -374,13 +338,12 @@ trait HasPermissions
     }
 
     /**
-     * Verify that permission(s) exist in the database.
-     * Handles both single permission and bulk permission verification.
+     * Retrieve one or multiple permissions from the database.
      *
-     * @param  string|array<string>  $permissionName  Single permission name or array of permission names
-     * @return Permission|Collection<int, Permission> Single Permission model or Collection of Permissions
+     * @param  string|array<string>  $permissionName
+     * @return Permission|Collection<int, Permission>
      *
-     * @throws PermissionException If any permission is not synced with the database
+     * @throws PermissionException If one or more permissions are not found
      */
     private function findPermissionOrFail(string|array $permissionName): Permission|Collection
     {

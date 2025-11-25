@@ -7,10 +7,7 @@ namespace Techieni3\LaravelUserPermissions\Exceptions;
 use RuntimeException;
 
 /**
- * PermissionException
- *
- * Custom exception for permission-related errors.
- * Provides static factory methods for common permission error scenarios.
+ * Custom exception with factory methods for permission errors.
  */
 class PermissionException extends RuntimeException
 {

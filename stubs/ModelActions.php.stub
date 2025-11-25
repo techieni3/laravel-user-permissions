@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Enums;
 
 /**
- * Model Actions Enum.
+ * Model Actions Enum
  *
  * Defines the standard CRUD and policy actions that can be performed on models.
  * These actions are used to generate permissions for models.

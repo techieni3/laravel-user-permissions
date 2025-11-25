@@ -56,7 +56,7 @@ class InstallPermissionsCommand extends Command
     }
 
     /**
-     * Publish the package configuration file to the application's config directory.
+     * Publish config file.
      */
     private function publishConfig(): void
     {
@@ -74,7 +74,7 @@ class InstallPermissionsCommand extends Command
     }
 
     /**
-     * Publish the package migrations to the application's migrations directory.
+     * Publish migrations.
      */
     private function publishMigrations(): void
     {
@@ -103,7 +103,7 @@ class InstallPermissionsCommand extends Command
     }
 
     /**
-     * Create the Enums directory in the application if it doesn't exist.
+     * Create the Enums directory.
      */
     private function createEnumsFolder(): void
     {
@@ -113,7 +113,7 @@ class InstallPermissionsCommand extends Command
     }
 
     /**
-     * Copy the Role enum stub to the application's Enums directory.
+     * Publish Role enum stub.
      */
     private function publishRoleEnum(): void
     {
@@ -131,7 +131,7 @@ class InstallPermissionsCommand extends Command
     }
 
     /**
-     * Copy the ModelActions enum stub to the application's Enums directory.
+     * Publish ModelActions enum stub.
      */
     private function publishModelActionsEnum(): void
     {
@@ -150,7 +150,6 @@ class InstallPermissionsCommand extends Command
 
     /**
      * Add the HasRoles trait to the User model.
-     * Detects the User model structure and adds the trait accordingly.
      *
      * @throws FileNotFoundException
      */
@@ -184,7 +183,7 @@ class InstallPermissionsCommand extends Command
     }
 
     /**
-     * Add the HasRoles trait namespace import to the User model.
+     * Add HasRoles import to a User model.
      */
     private function addHasRolesTraitsNamespaceInUserModel(): void
     {

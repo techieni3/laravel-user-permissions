@@ -11,9 +11,9 @@ use Illuminate\Queue\SerializesModels;
 use Techieni3\LaravelUserPermissions\Models\Permission;
 
 /**
- * PermissionRemoved Event.
+ * PermissionRemoved Event
  *
- * Dispatched when a permission is removed from a model (typically a user).
+ * Dispatched when a permission is removed from a model.
  */
 class PermissionRemoved
 {

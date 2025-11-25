@@ -14,9 +14,7 @@ use Throwable;
 /**
  * Generate Permissions Command.
  *
- * This command generates permissions for all models in the configured models directory.
- * It creates permissions for each model action (view, create, edit, delete, etc.)
- * as defined in the ModelActions enum.
+ * This command generates permissions for all models based on the ModelActions enum.
  */
 class GeneratePermissionsCommand extends Command
 {
@@ -92,7 +90,7 @@ class GeneratePermissionsCommand extends Command
     }
 
     /**
-     * Get a permissions array for a specific model.
+     * Build an array of permissions for the given model.
      *
      * @param  array<string>  $actions
      * @return array<int, array{name: string, display_name: string}>

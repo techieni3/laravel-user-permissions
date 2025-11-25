@@ -11,9 +11,9 @@ use Illuminate\Queue\SerializesModels;
 use Techieni3\LaravelUserPermissions\Models\Role;
 
 /**
- * RoleAdded Event.
+ * RoleAdded Event
  *
- * Dispatched when a role is added to a model (typically a user).
+ * Dispatched when a role is added to a model.
  */
 class RoleAdded
 {

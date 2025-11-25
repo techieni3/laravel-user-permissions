@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Config;
 use RuntimeException;
 
 /**
- * Role Model.
+ * Role Model
  *
  * Represents a user role that groups multiple permissions together.
  * Roles can be assigned to users to grant them a set of permissions.
@@ -27,11 +27,7 @@ use RuntimeException;
  */
 class Role extends Model
 {
-    /**
-     * The attributes that aren't mass-assignable.
-     *
-     * @var array<string>
-     */
+    /** @var array<string> */
     protected $guarded = ['id'];
 
     /**
@@ -49,12 +45,7 @@ class Role extends Model
         );
     }
 
-    /**
-     * Get the attributes that should be cast.
-     * Casts the name attribute to the configured role enum if it exists.
-     *
-     * @return array<string, string>
-     */
+    /** @return array<string, string> */
     protected function casts(): array
     {
         $roleEnum = Config::string('permissions.role_enum');

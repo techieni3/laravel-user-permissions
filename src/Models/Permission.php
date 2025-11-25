@@ -9,10 +9,9 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 /**
- * Permission Model.
+ * Permission Model
  *
- * Represents a permission that can be assigned to users directly
- * or through roles.
+ * Represents a permission that can be assigned to users directly or through roles.
  *
  * @property int $id The unique identifier for the permission
  * @property string $name The unique name of the permission (lowercase with underscores)
@@ -22,11 +21,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
  */
 class Permission extends Model
 {
-    /**
-     * The attributes that aren't mass-assignable.
-     *
-     * @var array<string>
-     */
+    /** @var array<string> */
     protected $guarded = ['id'];
 
     /**

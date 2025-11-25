@@ -11,9 +11,9 @@ use Illuminate\Queue\SerializesModels;
 use Techieni3\LaravelUserPermissions\Models\Role;
 
 /**
- * RoleRemoved Event.
+ * RoleRemoved Event
  *
- * Dispatched when a role is removed from a model (typically a user).
+ * Dispatched when a role is removed from a model.
  */
 class RoleRemoved
 {

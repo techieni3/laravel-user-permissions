@@ -7,10 +7,7 @@ namespace Techieni3\LaravelUserPermissions\Exceptions;
 use RuntimeException;
 
 /**
- * RoleException
- *
- * Custom exception for role-related errors.
- * Provides static factory methods for common role error scenarios.
+ * Custom exception with factory methods for role errors.
  */
 class RoleException extends RuntimeException
 {
