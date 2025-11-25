@@ -40,7 +40,7 @@ trait HasRoles
      *
      * @var Collection<int, Role>|null
      */
-    protected ?Collection $cachedRoles = null;
+    protected ?Collection $rolesCache = null;
 
     /**
      * Get all roles for the user.
@@ -70,17 +70,11 @@ trait HasRoles
     {
         $roles = is_array($roles) ? $roles : [$roles];
 
-        // Convert to role values
-        $roleValues = array_map(static function (BackedEnum|string $role): int|string {
-            if ($role instanceof BackedEnum) {
-                return $role->value;
-            }
+        // Convert to role names
+        $roleNames = array_map(static fn (BackedEnum|string $role): int|string => $role instanceof BackedEnum ? $role->value : $role, $roles);
 
-            return $role;
-        }, $roles);
-
-        return $query->whereHas('roles', function (Builder $q) use ($roleValues): void {
-            $q->whereIn('name', $roleValues);
+        return $query->whereHas('roles', function (Builder $q) use ($roleNames): void {
+            $q->whereIn('name', $roleNames);
         });
     }
 
@@ -96,17 +90,11 @@ trait HasRoles
     {
         $roles = is_array($roles) ? $roles : [$roles];
 
-        // Convert to role values
-        $roleValues = array_map(static function (BackedEnum|string $role): int|string {
-            if ($role instanceof BackedEnum) {
-                return $role->value;
-            }
+        // Convert to role names
+        $roleNames = array_map(static fn (BackedEnum|string $role): int|string => $role instanceof BackedEnum ? $role->value : $role, $roles);
 
-            return $role;
-        }, $roles);
-
-        return $query->whereDoesntHave('roles', function (Builder $q) use ($roleValues): void {
-            $q->whereIn('name', $roleValues);
+        return $query->whereDoesntHave('roles', function (Builder $q) use ($roleNames): void {
+            $q->whereIn('name', $roleNames);
         });
     }
 
@@ -125,7 +113,7 @@ trait HasRoles
         $roleEnum = $this->convertToRoleEnum($role);
 
         // Verify role exists in the database
-        $dbRole = $this->verifyRoleInDatabase($roleEnum);
+        $dbRole = $this->findRoleOrFail($roleEnum);
 
         try {
             // Attach the role to the user (database constraint handles duplicate check)
@@ -140,8 +128,8 @@ trait HasRoles
         }
 
         // Clear cached roles and permissions (since roles grant permissions)
-        $this->flushRolesCache();
-        $this->flushPermissionsCache();
+        $this->clearRolesCache();
+        $this->clearPermissionsCache();
 
         return $this;
     }
@@ -161,16 +149,16 @@ trait HasRoles
         $roleEnum = $this->convertToRoleEnum($role);
 
         // Verify role exists in the database
-        $dbRole = $this->verifyRoleInDatabase($roleEnum);
+        $dbRole = $this->findRoleOrFail($roleEnum);
 
-        $detached = $this->roles()->detach($dbRole->id);
-        if ($detached === 0) {
+        $detachedCount = $this->roles()->detach($dbRole->id);
+        if ($detachedCount === 0) {
             throw new RuntimeException("Role '{$roleEnum->value}' is not assigned to the user.");
         }
 
         // Clear cached roles and permissions (since roles grant permissions)
-        $this->flushRolesCache();
-        $this->flushPermissionsCache();
+        $this->clearRolesCache();
+        $this->clearPermissionsCache();
 
         return $this;
     }
@@ -191,7 +179,7 @@ trait HasRoles
             $roleEnums = array_map($this->convertToRoleEnum(...), $roles);
 
             // Verify all roles in a single query
-            $dbRoles = $this->verifyRoleInDatabase($roleEnums);
+            $dbRoles = $this->findRoleOrFail($roleEnums);
             $roleIds = $dbRoles->pluck('id')->all();
 
             // Detach all existing roles
@@ -204,8 +192,8 @@ trait HasRoles
 
         DB::afterCommit(function (): void {
             // Clear cached roles and permissions (since roles grant permissions)
-            $this->flushRolesCache();
-            $this->flushPermissionsCache();
+            $this->clearRolesCache();
+            $this->clearPermissionsCache();
         });
 
         return $this;
@@ -226,7 +214,7 @@ trait HasRoles
             $roleString = $role->value;
         }
 
-        return $this->getCachedRoles()
+        return $this->getRoles()
             ->map(static fn (Role $role) => $role->name->value)
             ->contains($roleString);
     }
@@ -256,38 +244,27 @@ trait HasRoles
     }
 
     /**
-     * Get all roles for the user as a collection.
-     * Uses request-level cache to avoid multiple DB queries within the same request.
+     * Get cached roles or load them from database.
+     * This ensures roles are only queried once per request for optimal performance.
      *
      * @return Collection<int, Role>
      */
-    public function getAllRoles(): Collection
+    public function getRoles(): Collection
     {
-        return $this->getCachedRoles();
+        if ($this->rolesCache === null) {
+            $this->rolesCache = $this->roles()->get();
+        }
+
+        return $this->rolesCache;
     }
 
     /**
      * Clear the request-level roles cache.
      * Should be called after adding/removing/syncing roles to ensure fresh data.
      */
-    public function flushRolesCache(): void
+    private function clearRolesCache(): void
     {
-        $this->cachedRoles = null;
-    }
-
-    /**
-     * Get cached roles or load them from database.
-     * This ensures roles are only queried once per request for optimal performance.
-     *
-     * @return Collection<int, Role>
-     */
-    protected function getCachedRoles(): Collection
-    {
-        if ($this->cachedRoles === null) {
-            $this->cachedRoles = $this->roles()->get();
-        }
-
-        return $this->cachedRoles;
+        $this->rolesCache = null;
     }
 
     /**
@@ -308,7 +285,7 @@ trait HasRoles
 
         /** @var class-string $roleEnumClass */
         $roleEnumClass = Config::string('permissions.role_enum');
-        $this->verifyRoleEnumFile($roleEnumClass);
+        $this->ensureRoleEnumExists($roleEnumClass);
 
         $roleEnumInstance = $roleEnumClass::tryFrom($role);
 
@@ -329,7 +306,7 @@ trait HasRoles
      *
      * @throws RuntimeException If the enum class is missing or not a valid enum
      */
-    private function verifyRoleEnumFile(string $roleEnum): void
+    private function ensureRoleEnumExists(string $roleEnum): void
     {
         if ( ! class_exists($roleEnum) || ! enum_exists($roleEnum)) {
             throw new RuntimeException(
@@ -347,7 +324,7 @@ trait HasRoles
      *
      * @throws RuntimeException If any role is not synced with the database
      */
-    private function verifyRoleInDatabase(BackedEnum|array $roleEnum): Role|Collection
+    private function findRoleOrFail(BackedEnum|array $roleEnum): Role|Collection
     {
         // Handle single role
         if ($roleEnum instanceof BackedEnum) {

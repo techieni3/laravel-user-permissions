@@ -31,10 +31,10 @@ Route::prefix(config('permissions.path', 'permissions-manager'))
 
             // User Access
             Route::get('/users/{user}/access', [UserAccessController::class, 'show'])
-                ->name('permissions.api.users.access.show');
+                ->name('permissions.api.user-access.show');
 
             Route::put('/users/{user}/access', [UserAccessController::class, 'update'])
-                ->name('permissions.api.users.access.update');
+                ->name('permissions.api.user-access.update');
 
         });
 

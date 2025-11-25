@@ -6,8 +6,8 @@
         <meta name="csrf-token" content="{{ csrf_token() }}" />
         <title>Permissions Manager</title>
 
-        {!! Techieni3\LaravelUserPermissions\Vite::css() !!}
-        {!! Techieni3\LaravelUserPermissions\Vite::js() !!}
+        {!! Techieni3\LaravelUserPermissions\PermissionAssets::css() !!}
+        {!! Techieni3\LaravelUserPermissions\PermissionAssets::js() !!}
     </head>
     <body>
         <div id="app"></div>

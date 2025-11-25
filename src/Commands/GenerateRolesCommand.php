@@ -55,15 +55,15 @@ class GenerateRolesCommand extends Command
             return;
         }
 
-        $roles = [];
-        foreach ($rolesFromEnum as $role) {
-            $roles[] = [
-                'name' => mb_strtolower((string) $role->value),
-                'display_name' => $role->name,
+        $rolesData = [];
+        foreach ($rolesFromEnum as $roleCase) {
+            $rolesData[] = [
+                'name' => mb_strtolower((string) $roleCase->value),
+                'display_name' => $roleCase->name,
             ];
         }
 
-        $count = Role::query()->upsert($roles, ['name']);
+        $count = Role::query()->upsert($rolesData, ['name']);
 
         $this->info("{$count} roles synchronized.");
     }

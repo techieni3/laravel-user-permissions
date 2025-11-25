@@ -36,7 +36,7 @@ trait HasPermissions
      *
      * @var Collection<int, Permission>|null
      */
-    protected ?Collection $cachedPermissions = null;
+    protected ?Collection $permissionsCache = null;
 
     /**
      * Get all direct permissions assigned to the model.
@@ -62,7 +62,7 @@ trait HasPermissions
      *
      * @return Collection<int, Permission>
      */
-    public function allPermissions(): Collection
+    public function getPermissionsWithRoles(): Collection
     {
         $direct = DB::table('users_permissions')
             ->join(
@@ -108,7 +108,7 @@ trait HasPermissions
         $permissions = is_array($permissions) ? $permissions : [$permissions];
 
         // Normalize permission names
-        $permissionNames = array_map($this->makePermissionName(...), $permissions);
+        $permissionNames = array_map($this->normalizePermissionName(...), $permissions);
 
         return $query->where(function (Builder $q) use ($permissionNames): void {
             // Check direct permissions
@@ -136,7 +136,7 @@ trait HasPermissions
         $permissions = is_array($permissions) ? $permissions : [$permissions];
 
         // Normalize permission names
-        $permissionNames = array_map($this->makePermissionName(...), $permissions);
+        $permissionNames = array_map($this->normalizePermissionName(...), $permissions);
 
         return $query
             ->whereDoesntHave('directPermissions', function (Builder $query) use ($permissionNames): void {
@@ -158,10 +158,10 @@ trait HasPermissions
      */
     public function addPermission(string $permission): static
     {
-        $searchablePermission = $this->makePermissionName($permission);
+        $permissionName = $this->normalizePermissionName($permission);
 
         // Get permission from the database
-        $dbPermission = $this->verifyPermissionInDatabase($searchablePermission);
+        $dbPermission = $this->findPermissionOrFail($permissionName);
 
         // Check if the user already has the permission
         if ($this->hasPermission($permission)) {
@@ -172,7 +172,7 @@ trait HasPermissions
         $this->directPermissions()->attach($dbPermission);
 
         // Clear cached permissions
-        $this->flushPermissionsCache();
+        $this->clearPermissionsCache();
 
         return $this;
     }
@@ -188,10 +188,10 @@ trait HasPermissions
      */
     public function removePermission(string $permission): static
     {
-        $searchablePermission = $this->makePermissionName($permission);
+        $searchablePermission = $this->normalizePermissionName($permission);
 
         // Get permission from the database
-        $dbPermission = $this->verifyPermissionInDatabase($searchablePermission);
+        $dbPermission = $this->findPermissionOrFail($searchablePermission);
 
         // Detach the permission from the user
         $detached = $this->directPermissions()->detach($dbPermission->id);
@@ -201,7 +201,7 @@ trait HasPermissions
         }
 
         // Clear cached permissions
-        $this->flushPermissionsCache();
+        $this->clearPermissionsCache();
 
         return $this;
     }
@@ -219,29 +219,29 @@ trait HasPermissions
     public function syncPermissions(array $permissions): static
     {
         // Normalize all permission names
-        $searchablePermissions = array_map($this->makePermissionName(...), $permissions);
+        $searchablePermissions = array_map($this->normalizePermissionName(...), $permissions);
 
         // Verify all permissions in a single query
-        $dbPermissions = $this->verifyPermissionInDatabase($searchablePermissions);
+        $dbPermissions = $this->findPermissionOrFail($searchablePermissions);
         $permissionIds = $dbPermissions->pluck('id');
 
         // Get permission IDs already granted via roles to avoid duplicates
-        $rolePermissionIds = $this->getPermissionIdsViaRoles();
+        $rolePermissionIds = $this->getRolePermissionIds();
 
-        $idsToSync = $permissionIds->diff($rolePermissionIds)->all();
+        $permissionIdsToSync = $permissionIds->diff($rolePermissionIds)->all();
 
-        DB::transaction(function () use ($idsToSync): void {
+        DB::transaction(function () use ($permissionIdsToSync): void {
             // Detach all existing permissions
             $this->directPermissions()->detach();
             // Attach all new permissions
-            if (count($idsToSync) > 0) {
-                $this->directPermissions()->attach($idsToSync);
+            if (count($permissionIdsToSync) > 0) {
+                $this->directPermissions()->attach($permissionIdsToSync);
             }
         });
 
         DB::afterCommit(function (): void {
             // Clear cached permissions
-            $this->flushPermissionsCache();
+            $this->clearPermissionsCache();
         });
 
         return $this;
@@ -251,14 +251,14 @@ trait HasPermissions
      * Check if the user has a specific permission.
      * Uses request-level cache to avoid multiple DB queries within the same request.
      *
-     * @param  string  $permissionString  The permission name to check
+     * @param  string  $permission  The permission name to check
      * @return bool True if the user has the permission, false otherwise
      */
-    public function hasPermission(string $permissionString): bool
+    public function hasPermission(string $permission): bool
     {
-        return $this->getCachedPermissions()
+        return $this->getPermissions()
             ->map(static fn (Permission $permission) => $permission->name)
-            ->contains($this->makePermissionName($permissionString));
+            ->contains($this->normalizePermissionName($permission));
     }
 
     /**
@@ -293,38 +293,27 @@ trait HasPermissions
     }
 
     /**
-     * Get all permissions for the user as a collection.
-     * Uses request-level cache to avoid multiple DB queries within the same request.
+     * Get cached permissions or load them from a database.
+     * This ensures permissions are only queried once per request for optimal performance.
      *
      * @return Collection<int, Permission>
      */
-    public function getAllPermissions(): Collection
+    public function getPermissions(): Collection
     {
-        return $this->getCachedPermissions();
+        if ($this->permissionsCache === null) {
+            $this->permissionsCache = $this->getPermissionsWithRoles();
+        }
+
+        return $this->permissionsCache;
     }
 
     /**
      * Clear the request-level permissions cache.
      * Should be called after adding/removing/syncing permissions to ensure fresh data.
      */
-    public function flushPermissionsCache(): void
+    private function clearPermissionsCache(): void
     {
-        $this->cachedPermissions = null;
-    }
-
-    /**
-     * Get cached permissions or load them from a database.
-     * This ensures permissions are only queried once per request for optimal performance.
-     *
-     * @return Collection<int, Permission>
-     */
-    protected function getCachedPermissions(): Collection
-    {
-        if ($this->cachedPermissions === null) {
-            $this->cachedPermissions = $this->allPermissions();
-        }
-
-        return $this->cachedPermissions;
+        $this->permissionsCache = null;
     }
 
     /**
@@ -334,7 +323,7 @@ trait HasPermissions
      * @param  string  $permissionString  The permission name to normalize
      * @return string The normalized permission name
      */
-    protected function makePermissionName(string $permissionString): string
+    private function normalizePermissionName(string $permissionString): string
     {
         $normalized = mb_strtolower(str_replace([' ', '-', '_'], '.', $permissionString));
 
@@ -357,7 +346,7 @@ trait HasPermissions
      *
      * @return array<int, mixed> Array of permission IDs
      */
-    private function getPermissionIdsViaRoles(): array
+    private function getRolePermissionIds(): array
     {
         return DB::table('users_roles')
             ->join(
@@ -380,7 +369,7 @@ trait HasPermissions
      *
      * @throws RuntimeException If any permission is not synced with the database
      */
-    private function verifyPermissionInDatabase(string|array $searchablePermission): Permission|Collection
+    private function findPermissionOrFail(string|array $searchablePermission): Permission|Collection
     {
         // Handle single permission
         if (is_string($searchablePermission)) {

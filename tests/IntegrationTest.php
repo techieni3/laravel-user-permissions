@@ -109,11 +109,11 @@ it('handles user with multiple roles and direct permissions', function (): void 
     expect($user->hasPermission('admin.view'))->toBeTrue(); // from Editor role
     expect($user->hasPermission('admin.update'))->toBeTrue(); // direct permission
 
-    $allPermissions = $user->getAllPermissions();
+    $allPermissions = $user->getPermissions();
     expect($allPermissions)->toHaveCount(3);
 });
 
-it('permissions are not duplicated in getAllPermissions', function (): void {
+it('permissions are not duplicated in getPermissions', function (): void {
     $adminRole = Role::query()->where('name', RoleEnum::Admin->value)->first();
     $createPerm = Permission::query()->where('name', 'admin.create')->first();
 
@@ -128,7 +128,7 @@ it('permissions are not duplicated in getAllPermissions', function (): void {
         ->toThrow(RuntimeException::class);
 
     // Should not have duplicates
-    $allPermissions = $user->getAllPermissions();
+    $allPermissions = $user->getPermissions();
     $createAdminCount = $allPermissions->where('name', 'admin.create')->count();
 
     expect($createAdminCount)->toBe(1);
@@ -189,8 +189,8 @@ it('cache is properly isolated between different users', function (): void {
     $user2->addPermission('admin.view');
 
     // Load permissions for both users
-    $user1Permissions = $user1->getAllPermissions();
-    $user2Permissions = $user2->getAllPermissions();
+    $user1Permissions = $user1->getPermissions();
+    $user2Permissions = $user2->getPermissions();
 
     // Verify they're different
     expect($user1Permissions->pluck('name')->toArray())
@@ -221,7 +221,7 @@ it('supports mass permission assignment', function (): void {
     }
 
     expect($user->hasAllPermissions($permissions))->toBeTrue();
-    expect($user->getAllPermissions())->toHaveCount(4);
+    expect($user->getPermissions())->toHaveCount(4);
 });
 
 it('works correctly after user model refresh', function (): void {

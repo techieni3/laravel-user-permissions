@@ -66,12 +66,12 @@ class RolePermissionController
         sort($models);
 
         // Sort permissions within each model by action
-        foreach ($groupedPermissions as $model => $perms) {
+        foreach ($groupedPermissions as $model => $modelPermissions) {
             usort(
-                $perms,
+                $modelPermissions,
                 static fn (array $a, array $b): int => strcmp($a['action'], $b['action']),
             );
-            $groupedPermissions[$model] = $perms;
+            $groupedPermissions[$model] = $modelPermissions;
         }
 
         return response()->json([

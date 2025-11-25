@@ -12,7 +12,7 @@ use Illuminate\Support\ServiceProvider;
 use Override;
 use Techieni3\LaravelUserPermissions\Commands\GeneratePermissionsCommand;
 use Techieni3\LaravelUserPermissions\Commands\GenerateRolesCommand;
-use Techieni3\LaravelUserPermissions\Commands\InstallPermissions;
+use Techieni3\LaravelUserPermissions\Commands\InstallPermissionsCommand;
 use Techieni3\LaravelUserPermissions\Middlewares\PermissionMiddleware;
 use Techieni3\LaravelUserPermissions\Middlewares\RoleMiddleware;
 use Techieni3\LaravelUserPermissions\Middlewares\RoleOrPermissionMiddleware;
@@ -37,7 +37,7 @@ class PermissionsServiceProvider extends ServiceProvider
                 commands: [
                     GeneratePermissionsCommand::class,
                     GenerateRolesCommand::class,
-                    InstallPermissions::class,
+                    InstallPermissionsCommand::class,
                 ],
             );
         }
@@ -106,7 +106,7 @@ class PermissionsServiceProvider extends ServiceProvider
 
         $router->aliasMiddleware('role', RoleMiddleware::class);
         $router->aliasMiddleware('permission', PermissionMiddleware::class);
-        $router->aliasMiddleware('role_or_permission', RoleOrPermissionMiddleware::class);
+        $router->aliasMiddleware('role.or.permission', RoleOrPermissionMiddleware::class);
     }
 
     /**

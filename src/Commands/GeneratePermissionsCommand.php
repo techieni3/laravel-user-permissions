@@ -68,7 +68,7 @@ class GeneratePermissionsCommand extends Command
         $excludedModels = Config::array('permissions.excluded_models', []);
         $excludedModelsBaseNames = array_map(class_basename(...), array_values($excludedModels));
 
-        $permissions = [];
+        $permissionsData = [];
 
         foreach ($modelFiles as $modelFile) {
             $modelName = $modelFile->getBasename('.php');
@@ -78,14 +78,14 @@ class GeneratePermissionsCommand extends Command
                 continue;
             }
 
-            $permissions[] = $this->getPermissionsForModel($modelName, $actions);
+            $permissionsData[] = $this->buildModelPermissions($modelName, $actions);
         }
 
-        $permissions = array_merge(...$permissions);
+        $permissionsData = array_merge(...$permissionsData);
         $count = 0;
 
-        if ($permissions !== []) {
-            $count = Permission::query()->upsert($permissions, ['name']);
+        if ($permissionsData !== []) {
+            $count = Permission::query()->upsert($permissionsData, ['name']);
         }
 
         $this->info("{$count} permissions synchronized.");
@@ -97,7 +97,7 @@ class GeneratePermissionsCommand extends Command
      * @param  array<string>  $actions
      * @return array<int, array{name: string, display_name: string}>
      */
-    protected function getPermissionsForModel(string $modelName, array $actions): array
+    protected function buildModelPermissions(string $modelName, array $actions): array
     {
         $permissions = [];
 

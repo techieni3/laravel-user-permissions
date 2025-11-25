@@ -12,7 +12,7 @@ beforeEach(function (): void {
 });
 
 it('optimizes syncPermissions with single database query', function (): void {
-    $user = User::create(['name' => 'John Doe']);
+    $user = User::query()->create(['name' => 'John Doe']);
 
     // Enable query logging
     DB::enableQueryLog();
@@ -56,7 +56,7 @@ it('optimizes syncPermissions with single database query', function (): void {
 });
 
 it('optimizes syncRoles with single database query', function (): void {
-    $user = User::create(['name' => 'John Doe']);
+    $user = User::query()->create(['name' => 'John Doe']);
 
     // Enable query logging
     DB::enableQueryLog();
@@ -121,7 +121,7 @@ it(
 );
 
 it('handles empty array gracefully in syncPermissions', function (): void {
-    $user = User::create(['name' => 'John Doe']);
+    $user = User::query()->create(['name' => 'John Doe']);
     $user->addPermission('admin.create');
 
     // Sync empty array should clear all permissions
@@ -131,11 +131,11 @@ it('handles empty array gracefully in syncPermissions', function (): void {
 });
 
 it('handles empty array gracefully in syncRoles', function (): void {
-    $user = User::create(['name' => 'John Doe']);
+    $user = User::query()->create(['name' => 'John Doe']);
     $user->addRole(Role::Admin);
 
     // Sync empty array should clear all roles
     $user->syncRoles([]);
 
-    expect($user->getAllRoles())->toHaveCount(0);
+    expect($user->getRoles())->toHaveCount(0);
 });

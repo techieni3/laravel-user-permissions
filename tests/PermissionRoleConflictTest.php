@@ -283,7 +283,7 @@ it('getAllPermissions returns both direct and role-based permissions', function 
     $this->user->addPermission('post.create');
 
     // Get all permissions
-    $allPermissions = $this->user->getAllPermissions();
+    $allPermissions = $this->user->getPermissions();
 
     // Should have 3 permissions total
     expect($allPermissions->count())->toBe(3);

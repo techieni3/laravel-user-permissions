@@ -14,7 +14,7 @@ use Throwable;
 /**
  * Install Permissions Command.
  */
-class InstallPermissions extends Command
+class InstallPermissionsCommand extends Command
 {
     /**
      * The name and signature of the console command.
@@ -48,8 +48,8 @@ class InstallPermissions extends Command
         $this->publishConfig();
         $this->publishMigrations();
         $this->createEnumsFolder();
-        $this->copyRoleStub();
-        $this->copyModelActionsStub();
+        $this->publishRoleEnum();
+        $this->publishModelActionsEnum();
         $this->addHasRolesTraitToUserModel();
 
         $this->info('✨ Permissions package installed successfully!');
@@ -84,19 +84,19 @@ class InstallPermissions extends Command
 
         File::ensureDirectoryExists($destinationPath);
 
-        $files = File::allFiles($migrationPath);
+        $migrationFiles = File::allFiles($migrationPath);
 
         $timestamp = date('Y_m_d_His');
-        $counter = 0;
+        $fileIndex = 0;
 
-        foreach ($files as $file) {
-            $fileName = $file->getFilename();
+        foreach ($migrationFiles as $migrationFile) {
+            $fileName = $migrationFile->getFilename();
 
-            $newFileName = $timestamp.'_'.mb_str_pad((string) $counter, 2, '0', STR_PAD_LEFT).'_'.$fileName;
+            $newFileName = $timestamp.'_'.mb_str_pad((string) $fileIndex, 2, '0', STR_PAD_LEFT).'_'.$fileName;
 
-            File::copy($file->getPathname(), $destinationPath.'/'.$newFileName);
+            File::copy($migrationFile->getPathname(), $destinationPath.'/'.$newFileName);
 
-            $counter++;
+            $fileIndex++;
         }
 
         $this->info('✅ Migrations published successfully.');
@@ -115,7 +115,7 @@ class InstallPermissions extends Command
     /**
      * Copy the Role enum stub to the application's Enums directory.
      */
-    private function copyRoleStub(): void
+    private function publishRoleEnum(): void
     {
         $stubPath = __DIR__.'/../../stubs/Role.php.stub';
 
@@ -133,7 +133,7 @@ class InstallPermissions extends Command
     /**
      * Copy the ModelActions enum stub to the application's Enums directory.
      */
-    private function copyModelActionsStub(): void
+    private function publishModelActionsEnum(): void
     {
         $stubPath = __DIR__.'/../../stubs/ModelActions.php.stub';
 
@@ -194,7 +194,7 @@ class InstallPermissions extends Command
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Techieni3\LaravelUserPermissions\Traits\HasRoles;
 EOT,
-            filePath: $this->userModelPath,
+            path: $this->userModelPath,
         );
     }
 
@@ -215,7 +215,7 @@ class User extends Authenticatable implements MustVerifyEmail
 {
     use HasRoles;
 EOT,
-            filePath: $this->userModelPath,
+            path: $this->userModelPath,
         );
     }
 
@@ -236,7 +236,7 @@ class User extends Authenticatable
 {
     use HasRoles;
 EOT,
-            filePath: $this->userModelPath,
+            path: $this->userModelPath,
         );
     }
 
@@ -246,11 +246,11 @@ EOT,
      * @param  string|array<string>  $search
      * @param  string|array<string>  $replace
      */
-    private function replaceInFile(string|array $search, string|array $replace, string $filePath): void
+    private function replaceInFile(string|array $search, string|array $replace, string $path): void
     {
         file_put_contents(
-            $filePath,
-            str_replace($search, $replace, (string) file_get_contents($filePath))
+            $path,
+            str_replace($search, $replace, (string) file_get_contents($path))
         );
     }
 
