@@ -13,6 +13,7 @@ use Override;
 use Techieni3\LaravelUserPermissions\Commands\GeneratePermissionsCommand;
 use Techieni3\LaravelUserPermissions\Commands\GenerateRolesCommand;
 use Techieni3\LaravelUserPermissions\Commands\InstallPermissionsCommand;
+use Techieni3\LaravelUserPermissions\Middlewares\AuthorizeDashboard;
 use Techieni3\LaravelUserPermissions\Middlewares\PermissionMiddleware;
 use Techieni3\LaravelUserPermissions\Middlewares\RoleMiddleware;
 use Techieni3\LaravelUserPermissions\Middlewares\RoleOrPermissionMiddleware;
@@ -105,6 +106,7 @@ class PermissionsServiceProvider extends ServiceProvider
         $router->aliasMiddleware('role', RoleMiddleware::class);
         $router->aliasMiddleware('permission', PermissionMiddleware::class);
         $router->aliasMiddleware('role.or.permission', RoleOrPermissionMiddleware::class);
+        $router->aliasMiddleware('permissions.dashboard', AuthorizeDashboard::class);
     }
 
     /**

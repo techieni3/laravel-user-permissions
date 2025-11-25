@@ -25,6 +25,14 @@ return [
         // URL path for accessing the dashboard
         'prefix' => env('PERMISSIONS_MANAGER_DASHBOARD_PATH', 'permissions-manager'),
 
+        // Middleware to protect the dashboard routes
+        'middleware' => ['web', 'auth'],
+
+        // Gate ability to authorize dashboard access (null = no additional authorization)
+        // Define this gate in your AppServiceProvider to control who can access the dashboard
+        // Example: Gate::define('viewPermissionsDashboard', fn($user) => $user->hasRole('admin'));
+        'gate' => null, // Disabled for tests
+
         // Column used to display usernames on the dashboard (e.g., name, email)
         'user_display_column' => 'name',
     ],

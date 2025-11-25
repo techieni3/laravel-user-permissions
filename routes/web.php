@@ -10,8 +10,9 @@ use Techieni3\LaravelUserPermissions\Http\Controllers\Api\UserController;
 use Techieni3\LaravelUserPermissions\Http\Controllers\Web\DashboardController;
 
 Route::prefix(config('permissions.dashboard.prefix', 'permissions-manager'))
-    ->middleware(config('permissions.dashboard.middleware', ['web', 'auth']))
-    ->group(function (): void {
+    ->middleware(
+        array_merge(config('permissions.dashboard.middleware', ['web', 'auth']), ['permissions.dashboard'])
+    )->group(function (): void {
         // API Routes
         Route::prefix('api')->group(function (): void {
             // Roles
