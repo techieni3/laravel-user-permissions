@@ -8,9 +8,12 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 use RuntimeException;
+use Techieni3\LaravelUserPermissions\Events\PermissionAdded;
+use Techieni3\LaravelUserPermissions\Events\PermissionRemoved;
 use Techieni3\LaravelUserPermissions\Models\Permission;
 use Throwable;
 
@@ -171,6 +174,11 @@ trait HasPermissions
         // Attach the permission to the user
         $this->directPermissions()->attach($dbPermission);
 
+        // Dispatch event if events are enabled
+        if (Config::boolean('permissions.events_enabled', false)) {
+            event(new PermissionAdded($this, $dbPermission));
+        }
+
         // Clear cached permissions
         $this->clearPermissionsCache();
 
@@ -198,6 +206,11 @@ trait HasPermissions
 
         if ($detached === 0) {
             throw new RuntimeException('Permission is not assigned to the user.');
+        }
+
+        // Dispatch event if events are enabled
+        if (Config::boolean('permissions.events_enabled', false)) {
+            event(new PermissionRemoved($this, $dbPermission));
         }
 
         // Clear cached permissions

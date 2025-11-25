@@ -13,6 +13,8 @@ use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
+use Techieni3\LaravelUserPermissions\Events\RoleAdded;
+use Techieni3\LaravelUserPermissions\Events\RoleRemoved;
 use Techieni3\LaravelUserPermissions\Models\Role;
 use Throwable;
 
@@ -127,6 +129,11 @@ trait HasRoles
             throw $queryException;
         }
 
+        // Dispatch event if events are enabled
+        if (Config::boolean('permissions.events_enabled', false)) {
+            event(new RoleAdded($this, $dbRole));
+        }
+
         // Clear cached roles and permissions (since roles grant permissions)
         $this->clearRolesCache();
         $this->clearPermissionsCache();
@@ -154,6 +161,11 @@ trait HasRoles
         $detachedCount = $this->roles()->detach($dbRole->id);
         if ($detachedCount === 0) {
             throw new RuntimeException("Role '{$roleEnum->value}' is not assigned to the user.");
+        }
+
+        // Dispatch event if events are enabled
+        if (Config::boolean('permissions.events_enabled', false)) {
+            event(new RoleRemoved($this, $dbRole));
         }
 
         // Clear cached roles and permissions (since roles grant permissions)

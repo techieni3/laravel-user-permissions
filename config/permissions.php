@@ -59,4 +59,17 @@ return [
 
     /** @phpstan-ignore class.notFound */
     'model_actions_enum' => App\Enums\ModelActions::class,
+
+    /*
+    |--------------------------------------------------------------------------
+    | Events Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Control whether events should be dispatched when roles and permissions
+    | are added or removed.
+    |
+     */
+
+    // Enable or disable event dispatching for role and permission changes
+    'events_enabled' => env('PERMISSIONS_EVENTS_ENABLED', true),
 ];
