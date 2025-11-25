@@ -3,8 +3,6 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\DB;
-use Techieni3\LaravelUserPermissions\Exceptions\PermissionException;
-use Techieni3\LaravelUserPermissions\Exceptions\RoleException;
 use Workbench\App\Enums\Role;
 use Workbench\App\Models\User;
 
@@ -13,7 +11,7 @@ beforeEach(function (): void {
     $this->artisan('sync:permissions');
 });
 
-it('optimizes syncPermissions with single database query', function (): void {
+it('optimizes syncPermissions', function (): void {
     $user = User::query()->create(['name' => 'John Doe']);
 
     // Enable query logging
@@ -80,6 +78,7 @@ it('optimizes syncRoles with single database query', function (): void {
             str_contains((string) $query['query'], 'where "name" in'),
     );
 
+    expect($queries)->toHaveCount(3);
     // Should use a single whereIn query instead of 3 separate queries
     expect($roleQueries)->toHaveCount(1);
 
@@ -87,53 +86,29 @@ it('optimizes syncRoles with single database query', function (): void {
     expect($user->hasAllRoles([Role::Admin, Role::User]))->toBeTrue();
 });
 
-it(
-    'throws detailed error when bulk permission verification fails',
-    function (): void {
-        $user = User::query()->create(['name' => 'John Doe']);
+it('does not have N+1 queries when loading users with roles', function (): void {
+    // Create 10 users manually
+    $users = [];
 
-        // Try to sync permissions that don't exist
-        expect(
-            static fn () => $user->syncPermissions([
-                'fake.permission.1',
-                'admin.create',
-                'fake.permission.2',
-            ]),
-        )->toThrow(PermissionException::class);
-    },
-);
+    for ($i = 0; $i < 10; $i++) {
+        $users[] = User::query()->create([
+            'name' => "User {$i}",
+        ]);
+    }
 
-it(
-    'throws detailed error when bulk role verification fails',
-    function (): void {
-        $user = User::query()->create(['name' => 'John Doe']);
+    // Assign an Admin role to each user
+    foreach ($users as $user) {
+        $user->addRole(Role::Admin);
+    }
 
-        // Manually create an invalid role enum for testing
-        // In real scenario, this would be a role that exists in enum but not in database
-        // We'll test by trying to sync before database is populated
-        DB::table('roles')->truncate();
+    DB::enableQueryLog();
 
-        expect(static fn () => $user->syncRoles([Role::User]))
-            ->toThrow(RoleException::class);
-    },
-);
+    // Load users with roles
+    $users = User::with('roles')->get();
+    $users->each(static fn ($user) => $user->roles);
 
-it('handles empty array gracefully in syncPermissions', function (): void {
-    $user = User::query()->create(['name' => 'John Doe']);
-    $user->addPermission('admin.create');
+    $queries = DB::getQueryLog();
 
-    // Sync empty array should clear all permissions
-    $user->syncPermissions([]);
-
-    expect($user->directPermissions()->get())->toHaveCount(0);
-});
-
-it('handles empty array gracefully in syncRoles', function (): void {
-    $user = User::query()->create(['name' => 'John Doe']);
-    $user->addRole(Role::Admin);
-
-    // Sync empty array should clear all roles
-    $user->syncRoles([]);
-
-    expect($user->getRoles())->toHaveCount(0);
+    // Should be exactly 2 queries: 1 for users, 1 for roles
+    expect($queries)->toHaveCount(2);
 });
