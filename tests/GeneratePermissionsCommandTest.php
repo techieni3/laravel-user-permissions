@@ -16,7 +16,7 @@ it('generate permission for models', function (): void {
 });
 
 it('fails permission generation if modelAction enum is not defined', function (): void {
-    $this->app['config']->set('permissions.model_actions_enum', '');
+    $this->app['config']->set('permissions.classes.model_actions_enum', '');
 
     $this->artisan('sync:permissions')
         ->assertExitCode(1);
@@ -26,7 +26,7 @@ it('fails permission generation if modelAction enum is not defined', function ()
 
 it('ignore permission generation for model if it is excluded', function (): void {
 
-    $this->app['config']->set('permissions.excluded_models', [
+    $this->app['config']->set('permissions.models.excluded', [
         User::class,
         Admin::class,
     ]);

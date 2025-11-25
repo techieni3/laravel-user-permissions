@@ -62,7 +62,7 @@ class PermissionsServiceProvider extends ServiceProvider
      */
     protected function registerRoutes(): void
     {
-        if ( ! config('permissions.dashboard_enabled', false)) {
+        if ( ! config('permissions.dashboard.enabled', false)) {
             return;
         }
 

@@ -259,7 +259,7 @@ trait HasRoles
         }
 
         /** @var class-string $roleEnumClass */
-        $roleEnumClass = Config::string('permissions.role_enum');
+        $roleEnumClass = Config::string('permissions.classes.role_enum');
         $this->ensureRoleEnumExists($roleEnumClass);
 
         $roleEnumInstance = $roleEnumClass::tryFrom($role);

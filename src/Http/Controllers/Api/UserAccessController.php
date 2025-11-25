@@ -23,8 +23,8 @@ class UserAccessController
     public function show(int $userId): JsonResponse
     {
         /** @var class-string<Model> $userModel */
-        $userModel = Config::string('permissions.user_model');
-        $displayColumn = Config::get('permissions.user_name_column', 'name');
+        $userModel = Config::string('permissions.classes.user');
+        $displayColumn = Config::get('permissions.dashboard.user_display_column', 'name');
 
         $user = $userModel::query()->findOrFail($userId);
 
@@ -77,7 +77,7 @@ class UserAccessController
     {
         try {
             /** @var class-string<Model> $userModel */
-            $userModel = Config::string('permissions.user_model');
+            $userModel = Config::string('permissions.classes.user');
             $user = $userModel::query()->findOrFail($userId);
 
             $validated = $request->validate([

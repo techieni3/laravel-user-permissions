@@ -40,7 +40,7 @@ class GenerateRolesCommand extends Command
     public function handle(): void
     {
         /** @var class-string<BackedEnum> $roleEnum */
-        $roleEnum = Config::string('permissions.role_enum');
+        $roleEnum = Config::string('permissions.classes.role_enum');
 
         if ( ! class_exists($roleEnum) || ! enum_exists($roleEnum)) {
             $this->fail("Role enum class not found. Please make sure it's defined correctly.");

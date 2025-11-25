@@ -40,14 +40,14 @@ class GeneratePermissionsCommand extends Command
      */
     public function handle(): void
     {
-        $modelsPath = Config::string('permissions.models_path');
+        $modelsDirectory = Config::string('permissions.models.directory');
 
-        if ($modelsPath === '' || ! File::isDirectory($modelsPath)) {
-            $this->fail('Models directory not found. Please check your permissions.models_path config.');
+        if ($modelsDirectory === '' || ! File::isDirectory($modelsDirectory)) {
+            $this->fail('Models directory not found. Please check your permissions.models.directory config.');
         }
 
         /** @var class-string<BackedEnum> $modelActionsEnum */
-        $modelActionsEnum = Config::string('permissions.model_actions_enum');
+        $modelActionsEnum = Config::string('permissions.classes.model_actions_enum');
 
         if ( ! class_exists($modelActionsEnum) || ! enum_exists($modelActionsEnum)) {
             $this->fail("ModelActions enum class not found. Please make sure it's defined correctly.");
@@ -60,10 +60,10 @@ class GeneratePermissionsCommand extends Command
             $this->fail("No actions found in the {$modelActionsEnum} enum.");
         }
 
-        $modelFiles = File::allFiles($modelsPath);
+        $modelFiles = File::allFiles($modelsDirectory);
 
         /** @var array<string> $excludedModels */
-        $excludedModels = Config::array('permissions.excluded_models', []);
+        $excludedModels = Config::array('permissions.models.excluded', []);
         $excludedModelsBaseNames = array_map(class_basename(...), array_values($excludedModels));
 
         $permissionsData = [];

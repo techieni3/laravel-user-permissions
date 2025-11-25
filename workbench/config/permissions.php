@@ -11,23 +11,23 @@ use function Orchestra\Testbench\workbench_path;
 return [
     /*
     |--------------------------------------------------------------------------
-    | Dashboard Configuration
+    | Dashboard Settings
     |--------------------------------------------------------------------------
     |
-    | These values control the permissions manager dashboard UI, including
-    | whether it's enabled and the URL path where it will be accessible.
+    | Controls the permissions manager dashboard: whether it’s enabled
+    | and the URL where it can be accessed.
     |
      */
+    'dashboard' => [
+        // Enable or disable the permissions manager dashboard
+        'enabled' => env('PERMISSIONS_MANAGER_DASHBOARD_ENABLED', true),
 
-    // Enable or disable the permissions manager UI
-    'dashboard_enabled' => env('PERMISSIONS_MANAGER_DASHBOARD_ENABLED', true),
+        // URL path for accessing the dashboard
+        'prefix' => env('PERMISSIONS_MANAGER_DASHBOARD_PATH', 'permissions-manager'),
 
-    // The path where the permissions manager UI will be available
-    'path' => env('PERMISSIONS_MANAGER_DASHBOARD_PATH', 'permissions-manager'),
-
-    // The column to use for displaying username on the permission manager dashboard
-    // (e.g., 'name', 'email', 'username')
-    'user_name_column' => 'name',
+        // Column used to display usernames on the dashboard (e.g., name, email)
+        'user_display_column' => 'name',
+    ],
 
     /*
     |--------------------------------------------------------------------------
@@ -38,13 +38,14 @@ return [
     | to generate permissions dynamically.
     |
      */
+    'models' => [
+        // Directory containing your application's Eloquent models
+        'directory' => workbench_path('app/Models'),
 
-    // Directory containing all your Eloquent models
-    'models_path' => workbench_path('app/Models'),
-
-    // Excluded models that should NOT have permissions generated
-    'excluded_models' => [
-        // App\Models\User::class,
+        // Models to exclude from permission generation
+        'excluded' => [
+            // App\Models\User::class,
+        ],
     ],
 
     /*
@@ -52,27 +53,25 @@ return [
     | Core Application Classes
     |--------------------------------------------------------------------------
     |
-    | These references allow the package to know which classes represent the
-    | user entity and the role enumeration.
+    | Classes used by the permissions system (user model, role enum, etc.).
     |
      */
+    'classes' => [
+        'user' => User::class,
 
-    'user_model' => User::class,
+        'role_enum' => Role::class,
 
-    'role_enum' => Role::class,
-
-    'model_actions_enum' => ModelActions::class,
+        'model_actions_enum' => ModelActions::class,
+    ],
 
     /*
-   |--------------------------------------------------------------------------
-   | Events Configuration
-   |--------------------------------------------------------------------------
-   |
-   | Control whether events should be dispatched when roles and permissions
-   | are added or removed.
-   |
+    |--------------------------------------------------------------------------
+    | Events
+    |--------------------------------------------------------------------------
+    |
+    | Enable or disable events fired when roles or permissions change.
+    |
     */
 
-    // Enable or disable event dispatching for role and permission changes
     'events_enabled' => env('PERMISSIONS_EVENTS_ENABLED', true),
 ];

@@ -48,7 +48,7 @@ class Role extends Model
     /** @return array<string, string> */
     protected function casts(): array
     {
-        $roleEnum = Config::string('permissions.role_enum');
+        $roleEnum = Config::string('permissions.classes.role_enum');
 
         if ( ! class_exists($roleEnum)) {
             throw new RuntimeException(

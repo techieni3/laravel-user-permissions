@@ -17,8 +17,8 @@ class UserController
     public function index(Request $request): JsonResponse
     {
         /** @var class-string<Model> $userModel */
-        $userModel = Config::string('permissions.user_model');
-        $displayColumn = Config::string('permissions.user_name_column', 'name');
+        $userModel = Config::string('permissions.classes.user');
+        $displayColumn = Config::string('permissions.dashboard.user_display_column', 'name');
 
         $query = $userModel::query()
             ->with(['roles:id,display_name'])

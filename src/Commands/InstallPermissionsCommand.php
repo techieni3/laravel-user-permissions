@@ -43,7 +43,7 @@ class InstallPermissionsCommand extends Command
      */
     public function handle(): void
     {
-        $this->userModelPath = $this->getClassFilePath(Config::string('permissions.user_model'));
+        $this->userModelPath = $this->getClassFilePath(Config::string('permissions.classes.user'));
 
         $this->publishConfig();
         $this->publishMigrations();

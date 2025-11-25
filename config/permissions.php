@@ -12,15 +12,16 @@ return [
     | and the URL where it can be accessed.
     |
     */
+    'dashboard' => [
+        // Enable or disable the permissions manager dashboard
+        'enabled' => env('PERMISSIONS_MANAGER_DASHBOARD_ENABLED', true),
 
-    // Enable or disable the permissions manager dashboard
-    'dashboard_enabled' => env('PERMISSIONS_MANAGER_DASHBOARD_ENABLED', true),
+        // URL path for accessing the dashboard
+        'prefix' => env('PERMISSIONS_MANAGER_DASHBOARD_PATH', 'permissions-manager'),
 
-    // URL path for accessing the dashboard
-    'path' => env('PERMISSIONS_MANAGER_DASHBOARD_PATH', 'permissions-manager'),
-
-    // Column used to display usernames on the dashboard (e.g., name, email)
-    'user_name_column' => 'name',
+        // Column used to display usernames on the dashboard (e.g., name, email)
+        'user_display_column' => 'name',
+    ],
 
     /*
     |--------------------------------------------------------------------------
@@ -30,13 +31,14 @@ return [
     | Controls how models are discovered when generating permissions.
     |
     */
+    'models' => [
+        // Directory containing your application's Eloquent models
+        'directory' => app_path('Models'),
 
-    // Directory containing your application’s Eloquent models
-    'models_path' => app_path('Models'),
-
-    // Models to exclude from permission generation
-    'excluded_models' => [
-        // App\Models\User::class,
+        // Models to exclude from permission generation
+        'excluded' => [
+            // App\Models\User::class,
+        ],
     ],
 
     /*
@@ -47,15 +49,16 @@ return [
     | Classes used by the permissions system (user model, role enum, etc.).
     |
     */
+    'classes' => [
+        /** @phpstan-ignore class.notFound */
+        'user' => App\Models\User::class,
 
-    /** @phpstan-ignore class.notFound */
-    'user_model' => App\Models\User::class,
+        /** @phpstan-ignore class.notFound */
+        'role_enum' => App\Enums\Role::class,
 
-    /** @phpstan-ignore class.notFound */
-    'role_enum' => App\Enums\Role::class,
-
-    /** @phpstan-ignore class.notFound */
-    'model_actions_enum' => App\Enums\ModelActions::class,
+        /** @phpstan-ignore class.notFound */
+        'model_actions_enum' => App\Enums\ModelActions::class,
+    ],
 
     /*
     |--------------------------------------------------------------------------

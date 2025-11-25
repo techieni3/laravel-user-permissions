@@ -43,7 +43,7 @@ final readonly class PermissionAssets
     private static function getJavaScriptConfig(): array
     {
         return [
-            'path' => config('permissions.path'),
+            'path' => config('permissions.dashboard.prefix'),
         ];
     }
 

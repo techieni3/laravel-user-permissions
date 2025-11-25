@@ -13,7 +13,7 @@ it('generate roles from Role enum', function (): void {
 });
 
 it('fails role generation if Role enum is not defined', function (): void {
-    $this->app['config']->set('permissions.role_enum', '');
+    $this->app['config']->set('permissions.classes.role_enum', '');
 
     $this->artisan('sync:roles')
         ->assertExitCode(1);
