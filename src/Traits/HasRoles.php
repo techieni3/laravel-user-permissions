@@ -12,9 +12,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
-use RuntimeException;
 use Techieni3\LaravelUserPermissions\Events\RoleAdded;
 use Techieni3\LaravelUserPermissions\Events\RoleRemoved;
+use Techieni3\LaravelUserPermissions\Exceptions\RoleException;
 use Techieni3\LaravelUserPermissions\Models\Role;
 use Throwable;
 
@@ -107,7 +107,7 @@ trait HasRoles
      *
      * @param  string|BackedEnum  $role  The role to add (string or enum instance)
      *
-     * @throws RuntimeException If the role doesn't exist or is already assigned
+     * @throws RoleException If the role doesn't exist or is already assigned
      */
     public function addRole(string|BackedEnum $role): static
     {
@@ -123,7 +123,7 @@ trait HasRoles
         } catch (QueryException $queryException) {
             // Duplicate entry error (integrity constraint violation)
             if ($queryException->getCode() === '23000') {
-                throw new RuntimeException("Role '{$roleEnum->value}' is already assigned to the user.", $queryException->getCode(), $queryException);
+                throw RoleException::alreadyAssigned($roleEnum->value);
             }
 
             throw $queryException;
@@ -148,7 +148,7 @@ trait HasRoles
      *
      * @param  string|BackedEnum  $role  The role to remove (string or enum instance)
      *
-     * @throws RuntimeException If the role doesn't exist or is not assigned
+     * @throws RoleException If the role doesn't exist or is not assigned
      */
     public function removeRole(string|BackedEnum $role): static
     {
@@ -160,7 +160,7 @@ trait HasRoles
 
         $detachedCount = $this->roles()->detach($dbRole->id);
         if ($detachedCount === 0) {
-            throw new RuntimeException("Role '{$roleEnum->value}' is not assigned to the user.");
+            throw RoleException::notAssigned($roleEnum->value);
         }
 
         // Dispatch event if events are enabled
@@ -182,7 +182,7 @@ trait HasRoles
      *
      * @param  array<string|BackedEnum>  $roles  Array of roles to sync
      *
-     * @throws RuntimeException|Throwable If any role is not synced with the database
+     * @throws RoleException|Throwable If any role is not synced with the database
      */
     public function syncRoles(array $roles): static
     {
@@ -287,7 +287,7 @@ trait HasRoles
      * @param  string|BackedEnum  $role  The role to convert
      * @return BackedEnum The role as a BackedEnum instance
      *
-     * @throws RuntimeException If the enum class is missing or the role is invalid
+     * @throws RoleException If the enum class is missing or the role is invalid
      */
     private function convertToRoleEnum(string|BackedEnum $role): BackedEnum
     {
@@ -302,9 +302,7 @@ trait HasRoles
         $roleEnumInstance = $roleEnumClass::tryFrom($role);
 
         if ($roleEnumInstance === null) {
-            throw new RuntimeException(
-                "The role '{$role}' is not valid for the {$roleEnumClass} enum."
-            );
+            throw RoleException::notFound($role);
         }
 
         return $roleEnumInstance;
@@ -316,14 +314,12 @@ trait HasRoles
      *
      * @param  string  $roleEnum  The fully qualified class name of the role enum
      *
-     * @throws RuntimeException If the enum class is missing or not a valid enum
+     * @throws RoleException If the enum class is missing or not a valid enum
      */
     private function ensureRoleEnumExists(string $roleEnum): void
     {
         if ( ! class_exists($roleEnum) || ! enum_exists($roleEnum)) {
-            throw new RuntimeException(
-                'Role enum not found. Please run "php artisan permissions:install" first.'
-            );
+            throw RoleException::enumNotFound();
         }
     }
 
@@ -334,18 +330,19 @@ trait HasRoles
      * @param  BackedEnum|array<BackedEnum>  $roleEnum  Single role or array of roles
      * @return Role|Collection<int, Role> Single Role model or Collection of Roles
      *
-     * @throws RuntimeException If any role is not synced with the database
+     * @throws RoleException If any role is not synced with the database
      */
     private function findRoleOrFail(BackedEnum|array $roleEnum): Role|Collection
     {
         // Handle single role
         if ($roleEnum instanceof BackedEnum) {
-            $dbRole = Role::query()->where('name', $roleEnum->value)->first();
+            $dbRole = Role::query()
+                ->select(['id', 'name'])
+                ->where('name', $roleEnum->value)
+                ->first();
 
             if ( ! $dbRole) {
-                throw new RuntimeException(
-                    "Role '{$roleEnum->value}' is not synced with the database. Please run \"php artisan sync:roles\" first."
-                );
+                throw RoleException::notFound($roleEnum->value);
             }
 
             return $dbRole;
@@ -353,17 +350,17 @@ trait HasRoles
 
         // Handle multiple roles (bulk)
         $roleValues = array_map(static fn (BackedEnum $role): int|string => $role->value, $roleEnum);
-        $dbRoles = Role::query()->whereIn('name', $roleValues)->get();
+        $dbRoles = Role::query()
+            ->select(['id', 'name'])
+            ->whereIn('name', $roleValues)
+            ->get();
 
         // Verify all roles were found
         $foundNames = $dbRoles->pluck('name')->map(static fn ($role) => $role->value)->all();
         $missingRoles = array_diff($roleValues, $foundNames);
 
         if ($missingRoles !== []) {
-            $missingList = implode(', ', $missingRoles);
-            throw new RuntimeException(
-                "Roles [{$missingList}] are not synced with the database. Please run \"php artisan sync:roles\" first."
-            );
+            throw RoleException::notFound($missingRoles);
         }
 
         return $dbRoles;

@@ -11,9 +11,9 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
-use RuntimeException;
 use Techieni3\LaravelUserPermissions\Events\PermissionAdded;
 use Techieni3\LaravelUserPermissions\Events\PermissionRemoved;
+use Techieni3\LaravelUserPermissions\Exceptions\PermissionException;
 use Techieni3\LaravelUserPermissions\Models\Permission;
 use Throwable;
 
@@ -157,7 +157,7 @@ trait HasPermissions
      *
      * @param  string  $permission  The permission name to add
      *
-     * @throws RuntimeException If the permission doesn't exist, is already directly assigned, or is granted via role
+     * @throws PermissionException If the permission doesn't exist, is already directly assigned, or is granted via role
      */
     public function addPermission(string $permission): static
     {
@@ -168,7 +168,7 @@ trait HasPermissions
 
         // Check if the user already has the permission
         if ($this->hasPermission($permission)) {
-            throw new RuntimeException('Permission is already assigned to the user.');
+            throw PermissionException::alreadyAssigned($permissionName);
         }
 
         // Attach the permission to the user
@@ -192,7 +192,7 @@ trait HasPermissions
      *
      * @param  string  $permission  The permission name to remove
      *
-     * @throws RuntimeException If the permission doesn't exist or is not directly assigned
+     * @throws PermissionException If the permission doesn't exist or is not directly assigned
      */
     public function removePermission(string $permission): static
     {
@@ -205,7 +205,7 @@ trait HasPermissions
         $detached = $this->directPermissions()->detach($dbPermission->id);
 
         if ($detached === 0) {
-            throw new RuntimeException('Permission is not assigned to the user.');
+            throw PermissionException::notAssigned($searchablePermission);
         }
 
         // Dispatch event if events are enabled
@@ -227,7 +227,7 @@ trait HasPermissions
      *
      * @param  array<string>  $permissions  Array of permission names to sync
      *
-     * @throws RuntimeException|Throwable If any permission is not synced with the database
+     * @throws PermissionException|Throwable If any permission is not synced with the database
      */
     public function syncPermissions(array $permissions): static
     {
@@ -377,23 +377,22 @@ trait HasPermissions
      * Verify that permission(s) exist in the database.
      * Handles both single permission and bulk permission verification.
      *
-     * @param  string|array<string>  $searchablePermission  Single permission name or array of permission names
+     * @param  string|array<string>  $permissionName  Single permission name or array of permission names
      * @return Permission|Collection<int, Permission> Single Permission model or Collection of Permissions
      *
-     * @throws RuntimeException If any permission is not synced with the database
+     * @throws PermissionException If any permission is not synced with the database
      */
-    private function findPermissionOrFail(string|array $searchablePermission): Permission|Collection
+    private function findPermissionOrFail(string|array $permissionName): Permission|Collection
     {
         // Handle single permission
-        if (is_string($searchablePermission)) {
+        if (is_string($permissionName)) {
             $permission = Permission::query()
-                ->where('name', '=', $searchablePermission)
+                ->select(['id', 'name'])
+                ->where('name', '=', $permissionName)
                 ->first();
 
             if ( ! $permission) {
-                throw new RuntimeException(
-                    "Permission '{$searchablePermission}' is not synced with the database. Please run \"php artisan sync:permissions\" first."
-                );
+                throw PermissionException::notFound($permissionName);
             }
 
             return $permission;
@@ -401,16 +400,16 @@ trait HasPermissions
 
         // Handle multiple permissions (bulk)
         $permissions = Permission::query()
-            ->whereIn('name', $searchablePermission)
+            ->select(['id', 'name'])
+            ->whereIn('name', $permissionName)
             ->get();
 
         // Verify all permissions were found
         $foundNames = $permissions->pluck('name')->all();
-        $missingPermissions = array_diff($searchablePermission, $foundNames);
+        $missingPermissions = array_diff($permissionName, $foundNames);
 
         if ($missingPermissions !== []) {
-            $missingList = implode(', ', $missingPermissions);
-            throw new RuntimeException("Permissions [{$missingList}] are not synced with the database. Please run \"php artisan sync:permissions\" first.");
+            throw PermissionException::notFound($missingPermissions);
         }
 
         return $permissions;

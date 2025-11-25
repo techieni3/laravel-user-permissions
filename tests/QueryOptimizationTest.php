@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\DB;
+use Techieni3\LaravelUserPermissions\Exceptions\PermissionException;
+use Techieni3\LaravelUserPermissions\Exceptions\RoleException;
 use Workbench\App\Enums\Role;
 use Workbench\App\Models\User;
 
@@ -97,10 +99,7 @@ it(
                 'admin.create',
                 'fake.permission.2',
             ]),
-        )->toThrow(
-            RuntimeException::class,
-            'Permissions [fake.permission.1, fake.permission.2] are not synced with the database',
-        );
+        )->toThrow(PermissionException::class);
     },
 );
 
@@ -114,9 +113,8 @@ it(
         // We'll test by trying to sync before database is populated
         DB::table('roles')->truncate();
 
-        expect(static fn () => $user->syncRoles([Role::User]))->toThrow(
-            RuntimeException::class,
-        );
+        expect(static fn () => $user->syncRoles([Role::User]))
+            ->toThrow(RoleException::class);
     },
 );
 
