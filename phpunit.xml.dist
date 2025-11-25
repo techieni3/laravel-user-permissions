@@ -2,6 +2,7 @@
 <phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd" bootstrap="vendor/autoload.php" colors="true" cacheDirectory=".phpunit.cache">
   <php>
     <env name="DB_CONNECTION" value="testing"/>
+    <env name="APP_KEY" value="base64:2fl3kcO0Zy5sKLj1KR7GXVK9qHjkR0HE9hJKR7GXVK8="/>
   </php>
   <testsuites>
     <testsuite name="Test Suite">
