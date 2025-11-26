@@ -102,6 +102,7 @@ class GeneratePermissionsCommand extends Command
         foreach ($actions as $action) {
             $permissionName = mb_strtolower("{$modelName}.{$action}");
 
+            $action = implode(' ', explode('_', $action));
             $permissions[] = [
                 'name' => $permissionName,
                 'display_name' => ucwords("{$modelName} {$action}"),

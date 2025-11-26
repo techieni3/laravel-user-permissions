@@ -155,7 +155,7 @@ class RolePermissionController
 
         if (count($parts) >= 2) {
             $model = ucfirst(array_shift($parts));
-            $action = implode(' ', $parts);
+            $action = str_replace('_', ' ', implode(' ', $parts));
 
             return [$model, $action];
         }
