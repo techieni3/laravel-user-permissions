@@ -88,10 +88,6 @@ class PermissionsServiceProvider extends ServiceProvider
         }
 
         $this->publishes([
-            __DIR__.'/../../public' => public_path('vendor/permissions'),
-        ], 'permissions-assets');
-
-        $this->publishes([
             __DIR__.'/../../config/permissions.php' => config_path('permissions.php'),
         ], 'permissions-config');
     }
