@@ -52,7 +52,7 @@ class InstallPermissionsCommand extends Command
         $this->publishModelActionsEnum();
         $this->addHasRolesTraitToUserModel();
 
-        $this->info('✨ Permissions package installed successfully!');
+        $this->info(' ✨ Permissions package installed successfully!');
     }
 
     /**
@@ -70,7 +70,7 @@ class InstallPermissionsCommand extends Command
 
         File::copy($configPath, $destinationPath);
 
-        $this->info('✅ Config file published successfully.');
+        $this->info(' ✅ Config file published successfully.');
     }
 
     /**
@@ -99,7 +99,7 @@ class InstallPermissionsCommand extends Command
             $fileIndex++;
         }
 
-        $this->info('✅ Migrations published successfully.');
+        $this->info(' ✅ Migrations published successfully.');
     }
 
     /**
@@ -127,7 +127,7 @@ class InstallPermissionsCommand extends Command
 
         File::copy($stubPath, $destinationPath);
 
-        $this->info('✅ Role stub copied successfully.');
+        $this->info(' ✅ Role stub copied successfully.');
     }
 
     /**
@@ -145,7 +145,7 @@ class InstallPermissionsCommand extends Command
 
         File::copy($stubPath, $destinationPath);
 
-        $this->info('✅ ModelActions stub copied successfully.');
+        $this->info(' ✅ ModelActions stub copied successfully.');
     }
 
     /**
@@ -158,7 +158,7 @@ class InstallPermissionsCommand extends Command
         $userModel = File::get($this->userModelPath);
 
         if (str_contains($userModel, 'use Techieni3\LaravelUserPermissions\Traits\HasRoles;')) {
-            $this->info('User model already has the HasRoles trait.');
+            $this->components->info('User model already has the HasRoles trait.');
 
             return;
         }
@@ -166,7 +166,7 @@ class InstallPermissionsCommand extends Command
         // check user model extend classes
         if (str_contains($userModel, 'User extends Authenticatable implements MustVerifyEmail')) {
             $this->addHasRolesTraitForMustVerifyEmailImplementedUserModel();
-            $this->info('✅ Added HasRoles trait to User model.');
+            $this->info(' ✅ Added HasRoles trait to User model.');
 
             return;
         }
@@ -174,7 +174,7 @@ class InstallPermissionsCommand extends Command
         // Check if the file contains only 'User extends Authenticatable' (and not 'implements MustVerifyEmail')
         if (str_contains($userModel, 'User extends Authenticatable')) {
             $this->addHasRolesTraitForAuthenticatableExtendedUserModel();
-            $this->info('✅ Added HasRoles trait to User model.');
+            $this->info(' ✅ Added HasRoles trait to User model.');
 
             return;
         }
