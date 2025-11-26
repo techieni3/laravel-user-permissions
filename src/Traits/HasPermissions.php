@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 use Techieni3\LaravelUserPermissions\Events\PermissionAdded;
 use Techieni3\LaravelUserPermissions\Events\PermissionRemoved;
+use Techieni3\LaravelUserPermissions\Events\PermissionsSynced;
 use Techieni3\LaravelUserPermissions\Exceptions\PermissionException;
 use Techieni3\LaravelUserPermissions\Models\Permission;
 use Throwable;
@@ -209,10 +210,16 @@ trait HasPermissions
      */
     public function syncPermissions(array $permissions): static
     {
+        // Capture previous direct permissions before sync (if events enabled)
+        $previousPermissions = Config::boolean('permissions.events_enabled', false)
+            ? $this->directPermissions()->get()
+            : collect();
+
         // Normalize all permission names
         $searchablePermissions = array_map($this->normalizePermissionName(...), $permissions);
 
         // Verify all permissions in a single query
+        /** @var \Illuminate\Database\Eloquent\Collection<int, Permission> $dbPermissions */
         $dbPermissions = $this->findPermissionOrFail($searchablePermissions);
         $permissionIds = $dbPermissions->pluck('id');
 
@@ -220,6 +227,11 @@ trait HasPermissions
         $rolePermissionIds = $this->getRolePermissionIds();
 
         $permissionIdsToSync = $permissionIds->diff($rolePermissionIds)->all();
+
+        // Store synced permissions for event (only those actually synced)
+        $syncedPermissions = $dbPermissions->filter(
+            static fn (Permission $permission): bool => in_array($permission->id, $permissionIdsToSync, true)
+        );
 
         DB::transaction(function () use ($permissionIdsToSync): void {
             // Detach all existing permissions
@@ -230,7 +242,21 @@ trait HasPermissions
             }
         });
 
-        DB::afterCommit(function (): void {
+        DB::afterCommit(function () use ($previousPermissions, $syncedPermissions): void {
+            // Dispatch event if events are enabled
+            if (Config::boolean('permissions.events_enabled', false)) {
+                $attached = $syncedPermissions->diff($previousPermissions);
+                $detached = $previousPermissions->diff($syncedPermissions);
+
+                event(new PermissionsSynced(
+                    model: $this,
+                    synced: $syncedPermissions,
+                    previous: $previousPermissions,
+                    attached: $attached,
+                    detached: $detached
+                ));
+            }
+
             // Clear cached permissions
             $this->clearPermissionsCache();
         });

@@ -39,7 +39,7 @@ it('optimizes syncPermissions', function (): void {
             str_contains((string) $query['query'], 'where "name" in'),
     );
 
-    expect($queries)->toHaveCount(4); // 4 queries for roles and permissions (see syncRoles test)
+    expect($queries)->toHaveCount(5); // 5 queries: 1 for previous permissions, 1 for finding permissions, 1 for role permissions, 1 detach, 1 attach
 
     // Should use a single whereIn query instead of 4 separate queries
     expect($permissionQueries)->toHaveCount(1);
@@ -78,7 +78,7 @@ it('optimizes syncRoles with single database query', function (): void {
             str_contains((string) $query['query'], 'where "name" in'),
     );
 
-    expect($queries)->toHaveCount(3);
+    expect($queries)->toHaveCount(4); // 4 queries: 1 for previous roles, 1 for finding roles, 1 detach, 1 attach
     // Should use a single whereIn query instead of 3 separate queries
     expect($roleQueries)->toHaveCount(1);
 

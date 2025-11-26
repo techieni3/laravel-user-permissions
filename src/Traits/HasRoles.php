@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
 use Techieni3\LaravelUserPermissions\Events\RoleAdded;
 use Techieni3\LaravelUserPermissions\Events\RoleRemoved;
+use Techieni3\LaravelUserPermissions\Events\RolesSynced;
 use Techieni3\LaravelUserPermissions\Exceptions\RoleException;
 use Techieni3\LaravelUserPermissions\Models\Role;
 use Throwable;
@@ -164,14 +165,22 @@ trait HasRoles
      */
     public function syncRoles(array $roles): static
     {
-        DB::transaction(function () use ($roles): void {
-            // Convert all roles to enums
-            $roleEnums = array_map($this->convertToRoleEnum(...), $roles);
+        // Capture previous roles before sync (if events enabled)
+        $previousRoles = Config::boolean('permissions.events_enabled', false)
+            ? $this->getRoles()
+            : collect();
 
-            // Verify all roles in a single query
-            $dbRoles = $this->findRoleOrFail($roleEnums);
-            $roleIds = $dbRoles->pluck('id')->all();
+        // Convert all roles to enums
+        $roleEnums = array_map($this->convertToRoleEnum(...), $roles);
 
+        /** @var Collection<int, Role> $dbRoles */
+        $dbRoles = $this->findRoleOrFail($roleEnums);
+        $roleIds = $dbRoles->pluck('id')->all();
+
+        // Store synced permissions for event (only those actually synced)
+        $syncedRoles = $dbRoles->filter(static fn (Role $role): bool => in_array($role->id, $roleIds, true));
+
+        DB::transaction(function () use ($roleIds): void {
             // Detach all existing roles
             $this->roles()->detach();
             // Bulk attach all new roles
@@ -180,7 +189,21 @@ trait HasRoles
             }
         });
 
-        DB::afterCommit(function (): void {
+        DB::afterCommit(function () use ($previousRoles, $syncedRoles): void {
+            // Dispatch event if events are enabled
+            if (Config::boolean('permissions.events_enabled', false)) {
+                $attached = $syncedRoles->diff($previousRoles);
+                $detached = $previousRoles->diff($syncedRoles);
+
+                event(new RolesSynced(
+                    model: $this,
+                    synced: $syncedRoles,
+                    previous: $previousRoles,
+                    attached: $attached,
+                    detached: $detached
+                ));
+            }
+
             // Clear cached roles and permissions (since roles grant permissions)
             $this->clearRolesCache();
             $this->clearPermissionsCache();
