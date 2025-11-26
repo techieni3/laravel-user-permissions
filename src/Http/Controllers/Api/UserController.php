@@ -21,9 +21,9 @@ class UserController
         $displayColumn = Config::string('permissions.dashboard.user_display_column', 'name');
 
         $query = $userModel::query()
+            ->select(['id', $displayColumn])
             ->with(['roles:id,display_name'])
-            ->withCount(['directPermissions'])
-            ->select(['id', $displayColumn]);
+            ->withCount(['directPermissions']);
 
         // Apply search filter if provided
         if ($request->has('search') && $search = $request->input('search')) {

@@ -17,8 +17,8 @@ class RoleController
     {
         /** @var Collection<int, Role> $roles */
         $roles = Role::query()
-            ->withCount('permissions')
             ->select(['id', 'display_name', 'updated_at'])
+            ->withCount('permissions')
             ->get();
 
         $data = $roles->map(
