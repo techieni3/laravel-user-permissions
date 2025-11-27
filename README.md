@@ -553,6 +553,13 @@ If you are unable to access the dashboard at `/permissions-manager`:
 1. Ensure you have run `php artisan migrate`.
 2. Clear your route cache: `php artisan route:clear`.
 3. Verify the `prefix` in `config/permissions.php`.
+4. Make sure a login route exists, as the dashboard is protected by the `auth` middleware by default.
+
+### Dashboard 500 Error
+If you encounter a 500 Internal Server Error when accessing the dashboard:
+1. Check that the `viewPermissionsDashboard` gate is defined in your `AppServiceProvider` (or use the custom gate name from your config).
+2. Alternatively, set `'gate' => null` in `config/permissions.php` to disable gate authorization.
+3. Check your Laravel logs at `storage/logs/laravel.log` for specific error details.
 
 ### Assets Not Loading
 The dashboard uses inline styles and scripts. You do **not** need to publish assets. If the dashboard is blank:
