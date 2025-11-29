@@ -17,7 +17,7 @@ A Laravel package for managing user roles and permissions. It uses PHP enums for
 - [Middleware](#middleware)
 - [Model Actions](#model-actions)
 - [Events](#available-events)
-- [Excluding Models](#excluding-models-from-permission-generation)
+- [Model Discovery Configuration](#model-discovery-configuration)
 - [Caching](#caching)
 - [Testing](#testing)
 - [Similar Packages](#similar-packages)
@@ -157,7 +157,9 @@ return [
 
 ### Model Discovery
 
-**`directory`** - Path to scan for models when generating permissions
+**`included`** - Array of directory paths and/or specific model classes to include for permission generation. Can contain:
+  - Directory paths (e.g., `app_path('Models')`) - scans all models in the directory
+  - Specific model class strings (e.g., `App\External\CustomModel::class`) - includes individual models
 
 **`excluded`** - Array of model classes to skip during permission generation
 
@@ -526,12 +528,38 @@ Disable events by setting `events_enabled` to `false` in config or via environme
 PERMISSIONS_EVENTS_ENABLED=false
 ```
 
-## Excluding Models from Permission Generation
+## Model Discovery Configuration
 
-To prevent permissions from being generated for specific models:
+The package provides flexible options for discovering models to generate permissions.
+
+### Including Models and Directories
+
+Specify which models to include using the `included` array. You can mix directory paths and specific model classes:
 
 ```php
 'models' => [
+    'included' => [
+        // Scan entire directories
+        app_path('Models'),
+        app_path('Modules/Blog/Models'),
+        app_path('Modules/Shop/Models'),
+        
+        // Include specific model classes
+        App\External\CustomModel::class,
+        App\ThirdParty\SpecialModel::class,
+    ],
+],
+```
+
+### Excluding Models
+
+To prevent specific models from having permissions generated, use the `excluded` array. This filters out models discovered from directories in the `included` array:
+
+```php
+'models' => [
+    'included' => [
+        app_path('Models'),
+    ],
     'excluded' => [
         App\Models\User::class,
         App\Models\PersonalAccessToken::class,

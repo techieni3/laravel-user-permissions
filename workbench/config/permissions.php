@@ -47,8 +47,10 @@ return [
     |
      */
     'models' => [
-        // Directory containing your application's Eloquent models
-        'directory' => workbench_path('app/Models'),
+        // Directories and/or specific model classes to include for permission generation
+        'included' => [
+            workbench_path('app/Models'),
+        ],
 
         // Models to exclude from permission generation
         'excluded' => [

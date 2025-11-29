@@ -40,8 +40,13 @@ return [
     |
     */
     'models' => [
-        // Directory containing your application's Eloquent models
-        'directory' => app_path('Models'),
+        // Directories and/or specific model classes to include for permission generation
+        // Can contain directory paths (e.g., app_path('Models')) or specific model class strings
+        'included' => [
+            app_path('Models'),
+            // app_path('Modules/Blog/Models'),
+            // App\External\CustomModel::class,
+        ],
 
         // Models to exclude from permission generation
         'excluded' => [

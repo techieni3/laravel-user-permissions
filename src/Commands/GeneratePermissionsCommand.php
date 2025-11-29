@@ -34,16 +34,17 @@ class GeneratePermissionsCommand extends Command
 
     /**
      * Execute the console command.
-     * Scans the models directory and generates permissions for each model.
+     * Scans the included directories and models and generates permissions.
      *
      * @throws Throwable
      */
     public function handle(): void
     {
-        $modelsDirectory = Config::string('permissions.models.directory');
+        /** @var array<string|class-string> $included */
+        $included = Config::array('permissions.models.included', []);
 
-        if ($modelsDirectory === '' || ! File::isDirectory($modelsDirectory)) {
-            $this->fail('Models directory not found. Please check your permissions.models.directory config.');
+        if ($included === []) {
+            $this->fail('No models or directories specified in permissions.models.included config.');
         }
 
         /** @var class-string<BackedEnum> $modelActionsEnum */
@@ -60,22 +61,15 @@ class GeneratePermissionsCommand extends Command
             $this->fail("No actions found in the {$modelActionsEnum} enum.");
         }
 
-        $modelFiles = File::allFiles($modelsDirectory);
-
-        /** @var array<string> $excludedModels */
+        /** @var array<class-string> $excludedModels */
         $excludedModels = Config::array('permissions.models.excluded', []);
         $excludedModelsBaseNames = array_map(class_basename(...), array_values($excludedModels));
 
+        $modelNames = $this->discoverModels($included, $excludedModelsBaseNames);
+
         $permissionsData = [];
 
-        foreach ($modelFiles as $modelFile) {
-            $modelName = $modelFile->getBasename('.php');
-
-            // check the model name is not excluded
-            if (in_array($modelName, $excludedModelsBaseNames, true)) {
-                continue;
-            }
-
+        foreach ($modelNames as $modelName) {
             $permissionsData[] = $this->buildModelPermissions($modelName, $actions);
         }
 
@@ -90,12 +84,56 @@ class GeneratePermissionsCommand extends Command
     }
 
     /**
+     * Discover model names from the included paths and classes.
+     *
+     * @param  array<string|class-string>  $included
+     * @param  array<string>  $excludedModelsBaseNames
+     * @return array<string>
+     */
+    private function discoverModels(array $included, array $excludedModelsBaseNames): array
+    {
+        $modelNames = [];
+
+        foreach ($included as $item) {
+            // Check if it's a class string (contains backslashes)
+            if (str_contains($item, '\\')) {
+                // It's a specific model class
+                if (class_exists($item)) {
+                    $modelName = class_basename($item);
+
+                    // Skip if excluded
+                    if (in_array($modelName, $excludedModelsBaseNames, true)) {
+                        continue;
+                    }
+
+                    $modelNames[] = $modelName;
+                }
+            } elseif (is_dir($item)) {
+                // It's a directory path
+                $modelFiles = File::allFiles($item);
+                foreach ($modelFiles as $modelFile) {
+                    $modelName = $modelFile->getBasename('.php');
+
+                    // Skip if excluded
+                    if (in_array($modelName, $excludedModelsBaseNames, true)) {
+                        continue;
+                    }
+
+                    $modelNames[] = $modelName;
+                }
+            }
+        }
+
+        return array_unique($modelNames);
+    }
+
+    /**
      * Build an array of permissions for the given model.
      *
      * @param  array<string>  $actions
      * @return array<int, array{name: string, display_name: string}>
      */
-    protected function buildModelPermissions(string $modelName, array $actions): array
+    private function buildModelPermissions(string $modelName, array $actions): array
     {
         $permissions = [];
 
