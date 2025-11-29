@@ -39,7 +39,7 @@
             "rector",
             "pint --parallel"
         ],
-        "test": "pest --parallel",
+        "test": "pest",
         "test-coverage": "pest --coverage-html coverage",
         "analyse": "phpstan analyse",
         "post-autoload-dump": [
