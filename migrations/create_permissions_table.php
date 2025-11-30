@@ -22,10 +22,10 @@ return new class extends Migration
             $table->foreignId('permission_id');
             $table->timestamps();
 
-            // Indexes
-            $table->index('role_id');
+            // Composite primary key
+            $table->primary(['role_id', 'permission_id']);
+            // Index for reverse lookups (finding roles by permission)
             $table->index('permission_id');
-            $table->unique(['role_id', 'permission_id']);
         });
 
         Schema::create('users_permissions', static function (Blueprint $table): void {
@@ -33,10 +33,10 @@ return new class extends Migration
             $table->foreignId('permission_id');
             $table->timestamps();
 
-            // Indexes
-            $table->index('user_id');
+            // Composite primary key
+            $table->primary(['user_id', 'permission_id']);
+            // Index for reverse lookups (finding users by permission)
             $table->index('permission_id');
-            $table->unique(['user_id', 'permission_id']);
         });
     }
 

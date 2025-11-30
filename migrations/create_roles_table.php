@@ -22,10 +22,10 @@ return new class extends Migration
             $table->foreignId('role_id');
             $table->timestamps();
 
-            // Indexes
-            $table->index('user_id');
+            // Composite primary key
+            $table->primary(['user_id', 'role_id']);
+            // Index for reverse lookups (finding users by role)
             $table->index('role_id');
-            $table->unique(['user_id', 'role_id']);
         });
     }
 
