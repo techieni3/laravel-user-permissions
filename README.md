@@ -16,6 +16,7 @@ A Laravel package for managing user roles and permissions. It uses PHP enums for
 - [Laravel Gate Integration](#laravel-gate-integration)
 - [Middleware](#middleware)
 - [Model Actions](#model-actions)
+- [Cascade Deletion](#cascade-deletion)
 - [Events](#available-events)
 - [Model Discovery Configuration](#model-discovery-configuration)
 - [Caching](#caching)
@@ -452,6 +453,70 @@ enum ModelActions: string
 
 Run `php artisan sync:permissions` after modifying the enum.
 
+## Cascade Deletion
+
+By default, when a user is deleted, their role and permission assignments remain in the database. To automatically clean up these relationships, use the `CascadeDeletesRolesAndPermissions` trait.
+
+### Setup
+
+Add the trait to your User model alongside `HasRoles`:
+
+```php
+use Techieni3\LaravelUserPermissions\Traits\HasRoles;
+use Techieni3\LaravelUserPermissions\Traits\CascadeDeletesRolesAndPermissions;
+
+class User extends Authenticatable
+{
+    use HasRoles, CascadeDeletesRolesAndPermissions;
+}
+```
+
+### How It Works
+
+When a user is deleted, the trait will:
+- Detach all assigned roles
+- Detach all direct permissions
+- Dispatch a `RolesAndPermissionsDeleted` event (if events are enabled)
+
+The trait automatically detects if your model uses soft deletes:
+- **Hard deletes**: Triggers on `deleting` event
+- **Soft deletes**: Triggers on `forceDeleting` event (permanent deletion only)
+
+### Important Notes
+
+**Bulk Deletes**: The trait only works for individual model deletions:
+
+```php
+// ✅ Will trigger cascade deletion
+$user->delete();
+$user->forceDelete(); // For soft-deleted models
+
+// ❌ Won't trigger cascade deletion (bypasses Eloquent)
+User::where('status', 'inactive')->delete();
+DB::table('users')->where('status', 'inactive')->delete();
+```
+
+For bulk deletes, use this pattern instead:
+
+```php
+// Load models first to trigger events
+User::where('status', 'inactive')->get()->each->delete();
+```
+
+**Manual Cleanup**: If you need to clean up orphaned records from bulk deletes:
+
+```php
+// Clean up orphaned user_roles entries
+DB::table('users_roles')
+    ->whereNotIn('user_id', DB::table('users')->pluck('id'))
+    ->delete();
+
+// Clean up orphaned user_permissions entries
+DB::table('users_permissions')
+    ->whereNotIn('user_id', DB::table('users')->pluck('id'))
+    ->delete();
+```
+
 ## Events
 
 The package dispatches events when roles and permissions change, allowing you to react to authorization changes in your application.
@@ -466,6 +531,7 @@ The package dispatches events when roles and permissions change, allowing you to
 | `PermissionAdded` | A single permission is added to a user | `$model`, `$permission` |
 | `PermissionRemoved` | A single permission is removed from a user | `$model`, `$permission` |
 | `PermissionsSynced` | Permissions are synced (bulk operation) | `$model`, `$synced`, `$previous`, `$attached`, `$detached` |
+| `RolesAndPermissionsDeleted` | User is deleted with cascade trait | `$model`, `$roles`, `$permissions` |
 
 ### Listening to Events
 
@@ -505,6 +571,16 @@ Event::listen(PermissionsSynced::class, function (PermissionsSynced $event) {
         'removed' => $event->detached->pluck('name'),
     ]);
 });
+
+// Listen to cascade deletion (requires CascadeDeletesRolesAndPermissions trait)
+Event::listen(RolesAndPermissionsDeleted::class, function (RolesAndPermissionsDeleted $event) {
+    $user = $event->model;
+    
+    Log::info("User {$user->id} deleted with cascade cleanup", [
+        'roles_removed' => $event->roles->pluck('name.value'),
+        'permissions_removed' => $event->permissions->pluck('name'),
+    ]);
+});
 ```
 
 ### Event Properties
@@ -519,6 +595,11 @@ Event::listen(PermissionsSynced::class, function (PermissionsSynced $event) {
 - `$previous` - Collection of roles/permissions before sync
 - `$attached` - Collection of roles/permissions that were added
 - `$detached` - Collection of roles/permissions that were removed
+
+**Cascade Deletion Event** (`RolesAndPermissionsDeleted`):
+- `$model` - The user model being deleted
+- `$roles` - Collection of roles that were detached
+- `$permissions` - Collection of direct permissions that were detached
 
 ### Disabling Events
 
