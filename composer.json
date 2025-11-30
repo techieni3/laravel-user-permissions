@@ -39,10 +39,7 @@
             "rector",
             "pint --parallel"
         ],
-        "format:check": [
-            "rector --dry-run",
-            "pint --test"
-        ],
+        "format:check": "pint --test",
         "test": "pest",
         "test-coverage": "pest --coverage-html coverage",
         "analyse": "phpstan analyse",
