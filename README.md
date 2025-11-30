@@ -503,19 +503,37 @@ For bulk deletes, use this pattern instead:
 User::where('status', 'inactive')->get()->each->delete();
 ```
 
-**Manual Cleanup**: If you need to clean up orphaned records from bulk deletes:
+### Cleaning Up Orphaned Records
+
+If you have orphaned pivot table records (from bulk deletes, database migrations, or other operations that bypass Eloquent events), use the cleanup command:
+
+```bash
+# Preview orphaned records without deleting
+php artisan permissions:cleanup-orphans --dry-run
+
+# Remove orphaned records
+php artisan permissions:cleanup-orphans
+```
+
+This command will:
+- Remove `users_roles` records where the user or role no longer exists
+- Remove `users_permissions` records where the user or permission no longer exists
+- Remove `roles_permissions` records where the role or permission no longer exists
+
+**Scheduling Periodic Cleanup**: Add to your `app/Console/Kernel.php` to run automatically:
 
 ```php
-// Clean up orphaned user_roles entries
-DB::table('users_roles')
-    ->whereNotIn('user_id', DB::table('users')->pluck('id'))
-    ->delete();
-
-// Clean up orphaned user_permissions entries
-DB::table('users_permissions')
-    ->whereNotIn('user_id', DB::table('users')->pluck('id'))
-    ->delete();
+protected function schedule(Schedule $schedule)
+{
+    // Run cleanup daily at 2 AM
+    $schedule->command('permissions:cleanup-orphans')->dailyAt('02:00');
+    
+    // Or run weekly
+    $schedule->command('permissions:cleanup-orphans')->weekly();
+}
 ```
+
+**Note**: This cleanup command is particularly useful if you are using bulk delete operations
 
 ## Events
 

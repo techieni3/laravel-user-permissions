@@ -10,6 +10,7 @@ use Illuminate\Contracts\Auth\Access\Gate;
 use Illuminate\Routing\Router;
 use Illuminate\Support\ServiceProvider;
 use Override;
+use Techieni3\LaravelUserPermissions\Commands\CleanupOrphanedPivotRecords;
 use Techieni3\LaravelUserPermissions\Commands\GeneratePermissionsCommand;
 use Techieni3\LaravelUserPermissions\Commands\GenerateRolesCommand;
 use Techieni3\LaravelUserPermissions\Commands\InstallPermissionsCommand;
@@ -38,6 +39,7 @@ class PermissionsServiceProvider extends ServiceProvider
                     GeneratePermissionsCommand::class,
                     GenerateRolesCommand::class,
                     InstallPermissionsCommand::class,
+                    CleanupOrphanedPivotRecords::class,
                 ],
             );
         }
