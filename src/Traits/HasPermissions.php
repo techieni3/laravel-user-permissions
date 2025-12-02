@@ -329,7 +329,7 @@ trait HasPermissions
      */
     private function normalizePermissionName(string $permissionString): string
     {
-        $normalized = mb_strtolower(str_replace([' ', '-', '_'], '.', $permissionString));
+        $normalized = mb_strtolower(str_replace(' ', '.', $permissionString));
 
         if (in_array(mb_trim($normalized), ['', '0'], true)) {
             throw new InvalidArgumentException('Permission name cannot be empty.');
